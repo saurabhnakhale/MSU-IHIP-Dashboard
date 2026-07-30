@@ -3,10 +3,11 @@ MSU · IDSP Disease Surveillance Report — Nagpur
 Professional Dynamic Dashboard built with Streamlit & Plotly.
 
 Features:
-- Live Google Sheets connection (with local fallback).
-- Dynamic date range, month, week, and disease filters.
-- Separate 3D-style charts for P-Form, L-Form, and NMC vs. Outside cases.
-- Enhanced Header, KPI indicators, and re-aligned Top Conditions layout.
+- Live Google Sheets sync with local CSV backup fallback.
+- Large, visible custom KPI signages (Tablet, Test Tube, Microscope, Lab Coat, Data Chart).
+- Standalone NMC vs Outside Cases section with its own search box.
+- Separate 3D-style charts for P-Form and L-Form daily/weekly/monthly trends.
+- Aligned Top Conditions Breakdown & Summary Matrix.
 """
 
 import io
@@ -28,7 +29,7 @@ DATA_PATH = Path(__file__).parent / "data" / "MSU_IDSP_Disease_Surveillance.csv"
 
 # Professional Dynamic Color Palette
 PALETTE = {
-    "primary": "#2563EB",     # Dynamic Royal Blue
+    "primary": "#2563EB",     # Royal Blue
     "secondary": "#7C3AED",   # Deep Violet
     "teal": "#0D9488",        # Vibrant Teal
     "amber": "#D97706",       # Bright Amber
@@ -36,7 +37,6 @@ PALETTE = {
     "emerald": "#059669",     # Emerald Green
     "cyan": "#06B6D4",        # Cyan/Sky
     "dark_bg": "#0F172A",     # Slate Dark Header
-    "card_border": "#CBD5E1", # Border Slate
 }
 
 REQUIRED_COLUMNS = [
@@ -52,7 +52,7 @@ st.set_page_config(
 )
 
 # ----------------------------------------------------------------------------
-# Custom Professional CSS (Big Bold Header + 3D Card Styling)
+# Custom CSS (Big Header, Large Visible KPI Signages & 3D Cards)
 # ----------------------------------------------------------------------------
 st.markdown("""
 <style>
@@ -95,21 +95,23 @@ html, body, [class*="css"] { font-family: "Segoe UI", -apple-system, Arial, sans
   font-weight: 500;
 }
 
-/* 3D Dynamic KPI Cards */
+/* 3D Dynamic KPI Cards with Large Signages */
 .pbi-card {
   background: linear-gradient(145deg, #FFFFFF, #F8FAFC);
   border: 1px solid #E2E8F0;
   border-radius: 8px;
   box-shadow: 4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8);
-  padding: 14px 18px;
+  padding: 14px 16px;
   margin-bottom: 8px;
   transition: transform 0.2s ease;
 }
 .pbi-card:hover { transform: translateY(-2px); }
 .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; }
-.kpi-value-container { display: flex; align-items: baseline; justify-content: space-between; margin-top: 6px; }
-.kpi-value { font-size: 26px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; }
-.kpi-sign { font-size: 16px; font-weight: 700; }
+.kpi-value-container { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.kpi-value { font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; }
+
+/* Large Signage/Icon Styling */
+.kpi-signage { font-size: 32px; line-height: 1; margin-left: 8px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); }
 .kpi-accent { height: 4px; border-radius: 2px; margin-bottom: 8px; }
 
 .badge-ok { background: #DCFCE7; color: #15803D; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; }
@@ -257,7 +259,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------
-# Enhanced KPI Cards with Signs & Visual Indicators
+# KPI Cards with Specific Large Signages
 # ----------------------------------------------------------------------------
 total_pform = filtered["P Form"].fillna(0).sum()
 total_lform = filtered["L Form"].fillna(0).sum()
@@ -267,23 +269,23 @@ avg_positivity = pos_rows.mean() if len(pos_rows) else 0
 active_diseases = filtered.loc[(filtered["P Form"].fillna(0) + filtered["L Form"].fillna(0)) > 0, "Disease"].nunique()
 
 kpis = [
-    ("Total P-Form Cases", f"{total_pform:,.0f}", PALETTE["primary"], "📋", "▲"),
-    ("Lab Confirmed (L-Form)", f"{total_lform:,.0f}", PALETTE["secondary"], "🧪", "▲"),
-    ("Samples Tested", f"{total_tested:,.0f}", PALETTE["amber"], "🔬", "📈"),
-    ("Avg Lab Positivity", f"{avg_positivity:.1f}%", PALETTE["rose"], "🩺", "⚠️" if avg_positivity > 10 else "🟢"),
-    ("Diseases Reporting", f"{active_diseases:,}", PALETTE["emerald"], "🏥", "📊"),
+    ("Total P-Form Cases", f"{total_pform:,.0f}", PALETTE["primary"], "💊"),      # Medicine Tablet
+    ("Total L-Form Cases", f"{total_lform:,.0f}", PALETTE["secondary"], "🧪"),    # Test Tube
+    ("Samples Tested", f"{total_tested:,.0f}", PALETTE["amber"], "🔬"),         # Microscope
+    ("Avg Lab Positivity", f"{avg_positivity:.1f}%", PALETTE["rose"], "🥼"),      # Lab Coat
+    ("Diseases Reporting", f"{active_diseases:,}", PALETTE["emerald"], "📊"),    # Data Chart
 ]
 
 cols = st.columns(5)
-for col, (label, value, color, icon, sign) in zip(cols, kpis):
+for col, (label, value, color, signage) in zip(cols, kpis):
     with col:
         st.markdown(f"""
         <div class="pbi-card">
           <div class="kpi-accent" style="background:{color}"></div>
-          <div class="kpi-label">{icon} {label}</div>
+          <div class="kpi-label">{label}</div>
           <div class="kpi-value-container">
              <div class="kpi-value">{value}</div>
-             <div class="kpi-sign" style="color:{color}">{sign}</div>
+             <div class="kpi-signage">{signage}</div>
           </div>
         </div>
         """, unsafe_allow_html=True)
@@ -302,7 +304,6 @@ def apply_3d_pbi_layout(fig, height=320, show_legend=False):
         font=dict(family="Segoe UI, Arial", size=11, color="#334155"),
         showlegend=show_legend,
         legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5) if show_legend else None,
-        boxmode="overlay"
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#E2E8F0", zeroline=False)
@@ -310,18 +311,17 @@ def apply_3d_pbi_layout(fig, height=320, show_legend=False):
 
 
 # ----------------------------------------------------------------------------
-# Main Dashboard Grid Layout (Left: Form Trends + NMC/Outside, Right: Top Conditions)
+# Section 1: Visual Trends (Left: P/L Form Trends, Right: Top Conditions)
 # ----------------------------------------------------------------------------
 c_left_panel, c_right_panel = st.columns([1.35, 1])
 
-# --- LEFT PANEL: Form Trends & NMC vs Outside ---
+# --- LEFT PANEL: P-Form & L-Form Visual Trends ---
 with c_left_panel:
     st.markdown('<div class="section-title">📊 Visual Trends & Lab Breakdowns</div>', unsafe_allow_html=True)
     
     main_tabs = st.tabs([
         "📋 P-Form (Syndromic)", 
-        "🧪 L-Form (Lab Confirmed)", 
-        "📍 NMC vs Outside Cases (L-Form)"
+        "🧪 L-Form (Lab Confirmed)"
     ])
 
     # 1. P-Form Trends
@@ -380,31 +380,8 @@ with c_left_panel:
             ))
             st.plotly_chart(apply_3d_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
-    # 3. NEW: NMC vs Outside Cases Visualization
-    with main_tabs[2]:
-        st.caption("Detailed Disease-wise analysis of NMC vs. Outside region cases (from L-Form)")
-        nmc_search = st.text_input("🔍 Search Disease for NMC/Outside Chart", key="nmc_search")
-        
-        nmc_df = filtered.groupby("Disease")[["NMC", "Outside"]].sum()
-        if nmc_search:
-            nmc_df = nmc_df[nmc_df.index.str.lower().str.contains(nmc_search.lower())]
 
-        nmc_df = nmc_df[(nmc_df["NMC"] > 0) | (nmc_df["Outside"] > 0)].sort_values(by="NMC").head(10)
-
-        fig_nmc = go.Figure()
-        fig_nmc.add_trace(go.Bar(
-            y=nmc_df.index, x=nmc_df["NMC"], name="NMC Cases", orientation="h",
-            marker=dict(color=PALETTE["teal"], line=dict(color="#0F766E", width=1.5))
-        ))
-        fig_nmc.add_trace(go.Bar(
-            y=nmc_df.index, x=nmc_df["Outside"], name="Outside Cases", orientation="h",
-            marker=dict(color=PALETTE["amber"], line=dict(color="#B45309", width=1.5))
-        ))
-        fig_nmc.update_layout(barmode="group")
-        st.plotly_chart(apply_3d_pbi_layout(fig_nmc, height=310, show_legend=True), use_container_width=True, config={"displayModeBar": False})
-
-
-# --- RIGHT PANEL: Re-aligned Top Conditions Breakdown ---
+# --- RIGHT PANEL: Top Conditions Breakdown ---
 with c_right_panel:
     st.markdown('<div class="section-title">🏆 Top Conditions Breakdown</div>', unsafe_allow_html=True)
     t_d, t_w, t_m = st.tabs(["📅 Daily Avg", "🗓️ Weekly Avg", "📆 Monthly Total"])
@@ -435,11 +412,43 @@ with c_right_panel:
         ))
         st.plotly_chart(apply_3d_pbi_layout(fig_tm, height=360), use_container_width=True, config={"displayModeBar": False})
 
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------
-# Secondary Section: Field Visit Status & Positivity Rate
+# Section 2: STANDALONE NMC VS OUTSIDE CASES VISUALIZATION
 # ----------------------------------------------------------------------------
+st.markdown('<div class="section-title">📍 NMC vs Outside Regional Cases (L-Form Analysis)</div>', unsafe_allow_html=True)
+
+col_search, _ = st.columns([1, 1])
+with col_search:
+    nmc_search = st.text_input("🔍 Search Disease for NMC/Outside Chart", key="standalone_nmc_search")
+
+nmc_df = filtered.groupby("Disease")[["NMC", "Outside"]].sum()
+if nmc_search:
+    nmc_df = nmc_df[nmc_df.index.str.lower().str.contains(nmc_search.lower())]
+
+nmc_df = nmc_df[(nmc_df["NMC"] > 0) | (nmc_df["Outside"] > 0)].sort_values(by="NMC", ascending=True).tail(12)
+
+if not nmc_df.empty:
+    fig_nmc = go.Figure()
+    fig_nmc.add_trace(go.Bar(
+        y=nmc_df.index, x=nmc_df["NMC"], name="NMC Cases", orientation="h",
+        marker=dict(color=PALETTE["teal"], line=dict(color="#0F766E", width=1.5))
+    ))
+    fig_nmc.add_trace(go.Bar(
+        y=nmc_df.index, x=nmc_df["Outside"], name="Outside Cases", orientation="h",
+        marker=dict(color=PALETTE["amber"], line=dict(color="#B45309", width=1.5))
+    ))
+    fig_nmc.update_layout(barmode="group")
+    st.plotly_chart(apply_3d_pbi_layout(fig_nmc, height=350, show_legend=True), use_container_width=True, config={"displayModeBar": False})
+else:
+    st.info("No matching records found for NMC / Outside disease analysis.")
+
 st.markdown("<br>", unsafe_allow_html=True)
+
+# ----------------------------------------------------------------------------
+# Section 3: Field Visit Status & Lab Positivity Rate
+# ----------------------------------------------------------------------------
 c_v1, c_v2 = st.columns(2)
 
 with c_v1:
@@ -464,7 +473,7 @@ with c_v2:
     st.plotly_chart(apply_3d_pbi_layout(fig_pos, height=270), use_container_width=True, config={"displayModeBar": False})
 
 # ----------------------------------------------------------------------------
-# Disease-Wise Summary Data Matrix
+# Section 4: Disease-Wise Summary Data Matrix
 # ----------------------------------------------------------------------------
 st.markdown('<div class="section-title">📋 Comprehensive Disease Summary Matrix</div>', unsafe_allow_html=True)
 grp = filtered.groupby("Disease").agg(
