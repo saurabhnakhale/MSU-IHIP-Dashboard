@@ -2,3 +2,5 @@ streamlit>=1.32
 pandas>=2.0
 plotly>=5.18
 st-gsheets-connection
+NCDC_India_Logo_2020-removebg-preview.png          <-- Left Logo
+Nagpur_Municipal_Corporation_logo__2_-removebg-preview.png  <-- Right Logo
