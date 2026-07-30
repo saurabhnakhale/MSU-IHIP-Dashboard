@@ -4,14 +4,10 @@ Power BI-style live dashboard built with Streamlit.
 
 Data flow
 ---------
-- On load, the app reads the CSV from DATA_PATH (data/MSU_IDSP_Disease_Surveillance.csv
-  in this repo) and caches it.
-- Clicking "Refresh data" clears the cache and re-reads that same file from disk, so if
-  you've edited/replaced it locally (or pulled a new version via `git pull`), the very
-  next click republishes the report with the new numbers. Nothing runs on a timer or in
-  the background -- it only re-reads when you click.
-- You can also drop in a different CSV via the uploader in the sidebar for a one-off look
-  without touching the repo file.
+- On load, the app fetches data directly from the Published Google Sheet URL.
+- If the URL fetch fails, it falls back to the local DATA_PATH CSV.
+- Clicking "Refresh data" clears Streamlit's cache and re-fetches the live data.
+- Dropping in a file via the sidebar file uploader will temporarily override all online/repo files.
 - Every load is reconciled against the source: P Form + L Form is summed and compared to
   the CSV's own Total column, and a pass/fail badge is shown in the header.
 """
@@ -25,8 +21,14 @@ import plotly.graph_objects as go
 import streamlit as st
 
 # ----------------------------------------------------------------------------
-# Config
+# Config & Data Sources
 # ----------------------------------------------------------------------------
+# Published CSV export link derived from your Google Sheet ID
+GOOGLE_SHEET_CSV_URL = (
+    "https://docs.google.com/spreadsheets/d/1NOtov-_mTp-KLWQ9RUjgm2T4ku3U3xSHZfMzoR_IuCc/export?format=csv"
+)
+
+# Local fallback path
 DATA_PATH = Path(__file__).parent / "data" / "MSU_IDSP_Disease_Surveillance.csv"
 
 PALETTE = {
@@ -34,14 +36,22 @@ PALETTE = {
     "pink": "#E044A7", "violet": "#744EC2", "mustard": "#D9B300", "red": "#D64550",
     "green": "#107C10",
 }
-SERIES_COLORS = [PALETTE["blue"], PALETTE["orange"], PALETTE["violet"], PALETTE["pink"],
-                  PALETTE["mustard"], PALETTE["purple"], PALETTE["red"], PALETTE["green"]]
+SERIES_COLORS = [
+    PALETTE["blue"], PALETTE["orange"], PALETTE["violet"], PALETTE["pink"],
+    PALETTE["mustard"], PALETTE["purple"], PALETTE["red"], PALETTE["green"]
+]
 
-REQUIRED_COLUMNS = ["Date", "Disease", "P Form", "L Form", "Tested Cases", "NMC",
-                     "Outside", "Positivity Rate", "Visit Status", "Year", "Month", "Total"]
+REQUIRED_COLUMNS = [
+    "Date", "Disease", "P Form", "L Form", "Tested Cases", "NMC",
+    "Outside", "Positivity Rate", "Visit Status", "Year", "Month", "Total"
+]
 
-st.set_page_config(page_title="MSU IDSP Disease Surveillance Report", layout="wide",
-                    page_icon="📊", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="MSU IDSP Disease Surveillance Report",
+    layout="wide",
+    page_icon="📊",
+    initial_sidebar_state="expanded"
+)
 
 # ----------------------------------------------------------------------------
 # Power BI-style CSS
@@ -81,10 +91,10 @@ hr { margin: 0.6rem 0; }
 # ----------------------------------------------------------------------------
 # Data loading + validation
 # ----------------------------------------------------------------------------
-@st.cache_data(show_spinner=False)
-def load_csv(path_or_buffer, cache_key: str) -> pd.DataFrame:
-    """cache_key busts the cache on refresh clicks / new uploads."""
-    df = pd.read_csv(path_or_buffer)
+@st.cache_data(show_spinner=False, ttl=60)
+def load_csv(path_or_url_or_buffer, cache_key: str) -> pd.DataFrame:
+    """Reads CSV directly from Google Sheets URL, local disk path, or file buffer."""
+    df = pd.read_csv(path_or_url_or_buffer)
     df.columns = [c.strip() for c in df.columns]
     return df
 
@@ -125,37 +135,45 @@ if "last_refreshed" not in st.session_state:
     st.session_state.last_refreshed = datetime.now()
 
 with st.sidebar:
-    st.markdown("### 🔄 Data")
+    st.markdown("### 🔄 Data Source")
     if st.button("Refresh data", use_container_width=True, type="primary"):
         st.cache_data.clear()
         st.session_state.cache_bust += 1
         st.session_state.last_refreshed = datetime.now()
         st.rerun()
 
-    uploaded = st.file_uploader("…or load a different CSV", type=["csv"],
-                                 help="Overrides the repo file for this session only.")
+    uploaded = st.file_uploader(
+        "…or upload a local CSV",
+        type=["csv"],
+        help="Overrides Google Sheets for this session only."
+    )
 
-    st.caption(f"Repo file: `{DATA_PATH.name}`")
     st.markdown("---")
 
 # ----------------------------------------------------------------------------
-# Load
+# Load Execution
 # ----------------------------------------------------------------------------
 if uploaded is not None:
     raw_df = load_csv(io.BytesIO(uploaded.getvalue()), cache_key=f"upload-{uploaded.name}-{uploaded.size}")
-    source_label = uploaded.name
+    source_label = f"Uploaded: {uploaded.name}"
 else:
-    raw_df = load_csv(DATA_PATH, cache_key=f"repo-{st.session_state.cache_bust}")
-    source_label = DATA_PATH.name
+    try:
+        raw_df = load_csv(GOOGLE_SHEET_CSV_URL, cache_key=f"gsheet-{st.session_state.cache_bust}")
+        source_label = "Google Sheets (Live)"
+    except Exception as e:
+        # Fallback to repository file if internet/URL fetch fails
+        st.sidebar.warning("Could not reach Google Sheets. Loading local backup file.")
+        raw_df = load_csv(DATA_PATH, cache_key=f"repo-{st.session_state.cache_bust}")
+        source_label = f"Local Fallback: {DATA_PATH.name}"
 
 df, meta = validate_and_clean(raw_df)
 
 if not meta["ok"]:
-    st.error(f"Could not load this file — missing required columns: {', '.join(meta['missing'])}")
+    st.error(f"Could not load data — missing required columns: {', '.join(meta['missing'])}")
     st.stop()
 
 # ----------------------------------------------------------------------------
-# Sidebar slicers (built from the loaded data)
+# Sidebar slicers (built from loaded data)
 # ----------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("### 🔎 Filters")
@@ -183,7 +201,7 @@ if sel_diseases:
     filtered = filtered[filtered["Disease"].isin(sel_diseases)]
 
 # ----------------------------------------------------------------------------
-# Header / title bar
+# Header / Title Bar
 # ----------------------------------------------------------------------------
 badge = ('<span class="badge-ok">✓ Reconciled</span>' if meta["reconciles"]
          else '<span class="badge-warn">⚠ Check totals</span>')
@@ -196,10 +214,10 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.caption("P-Form / L-Form syndromic & presumptive surveillance · click **Refresh data** in the sidebar "
-           "to re-read the CSV from disk and republish every visual below.")
+           "to re-fetch the live Google Sheet and update every visual below.")
 
 # ----------------------------------------------------------------------------
-# KPI row
+# KPI Row
 # ----------------------------------------------------------------------------
 total_pform = filtered["P Form"].fillna(0).sum()
 total_lform = filtered["L Form"].fillna(0).sum()
@@ -229,7 +247,7 @@ for col, (label, value, color) in zip(cols, kpis):
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------
-# Charts helpers
+# Charts Helpers
 # ----------------------------------------------------------------------------
 def pbi_layout(fig, height=280, legend=False):
     fig.update_layout(
@@ -244,7 +262,7 @@ def pbi_layout(fig, height=280, legend=False):
     return fig
 
 
-# Row 1: trend + top diseases
+# Row 1: Trend + Top Diseases
 c1, c2 = st.columns([1.3, 1])
 with c1:
     st.markdown('<div class="section-title">Daily Case Volume — P-Form Total</div>', unsafe_allow_html=True)
@@ -252,28 +270,34 @@ with c1:
              .groupby("Date", sort=False)["total_cases"].sum())
     daily.index = pd.to_datetime(daily.index, format="%m/%d/%Y", errors="coerce")
     daily = daily.sort_index()
-    fig = go.Figure(go.Scatter(x=daily.index, y=daily.values, mode="lines", fill="tozeroy",
-                                line=dict(color=PALETTE["blue"], width=2),
-                                fillcolor="rgba(17,141,255,0.12)"))
+    fig = go.Figure(go.Scatter(
+        x=daily.index, y=daily.values, mode="lines", fill="tozeroy",
+        line=dict(color=PALETTE["blue"], width=2),
+        fillcolor="rgba(17,141,255,0.12)"
+    ))
     st.plotly_chart(pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
 with c2:
     st.markdown('<div class="section-title">Top Reported Conditions</div>', unsafe_allow_html=True)
     top = filtered.groupby("Disease")["P Form"].sum().sort_values(ascending=False)
     top = top[top > 0].head(8).sort_values()
-    fig = go.Figure(go.Bar(x=top.values, y=top.index, orientation="h",
-                            marker_color=[SERIES_COLORS[i % len(SERIES_COLORS)] for i in range(len(top))]))
+    fig = go.Figure(go.Bar(
+        x=top.values, y=top.index, orientation="h",
+        marker_color=[SERIES_COLORS[i % len(SERIES_COLORS)] for i in range(len(top))]
+    ))
     st.plotly_chart(pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
-# Row 2: weekly combo + visit donut + positivity
+# Row 2: Weekly Combo + Visit Donut + Positivity
 c3, c4, c5 = st.columns(3)
 with c3:
     st.markdown('<div class="section-title">Weekly P-Form vs L-Form</div>', unsafe_allow_html=True)
     wk = filtered.groupby("Week")[["P Form", "L Form"]].sum().sort_index()
     fig = go.Figure()
     fig.add_bar(x=[f"W{int(w)}" for w in wk.index], y=wk["P Form"], name="P-Form", marker_color=PALETTE["blue"])
-    fig.add_trace(go.Scatter(x=[f"W{int(w)}" for w in wk.index], y=wk["L Form"], name="L-Form",
-                              mode="lines+markers", line=dict(color=PALETTE["red"], width=2), yaxis="y2"))
+    fig.add_trace(go.Scatter(
+        x=[f"W{int(w)}" for w in wk.index], y=wk["L Form"], name="L-Form",
+        mode="lines+markers", line=dict(color=PALETTE["red"], width=2), yaxis="y2"
+    ))
     fig.update_layout(yaxis2=dict(overlaying="y", side="right", showgrid=False))
     st.plotly_chart(pbi_layout(fig, legend=True), use_container_width=True, config={"displayModeBar": False})
 
@@ -281,8 +305,10 @@ with c4:
     st.markdown('<div class="section-title">Field Visit Status</div>', unsafe_allow_html=True)
     vc = filtered["Visit Status"].value_counts()
     colors_map = {"Traced": PALETTE["green"], "Visited": PALETTE["blue"], "Untraced": PALETTE["red"]}
-    fig = go.Figure(go.Pie(labels=vc.index, values=vc.values, hole=0.6,
-                            marker_colors=[colors_map.get(k, "#8A8886") for k in vc.index]))
+    fig = go.Figure(go.Pie(
+        labels=vc.index, values=vc.values, hole=0.6,
+        marker_colors=[colors_map.get(k, "#8A8886") for k in vc.index]
+    ))
     st.plotly_chart(pbi_layout(fig, legend=True), use_container_width=True, config={"displayModeBar": False})
 
 with c5:
@@ -294,7 +320,7 @@ with c5:
     st.plotly_chart(pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
 # ----------------------------------------------------------------------------
-# Summary table
+# Summary Table
 # ----------------------------------------------------------------------------
 st.markdown('<div class="section-title">Disease-wise Summary Matrix</div>', unsafe_allow_html=True)
 grp = filtered.groupby("Disease").agg(
@@ -315,8 +341,9 @@ st.dataframe(
         "L-Form": st.column_config.NumberColumn(format="%.0f"),
         "Tested": st.column_config.NumberColumn(format="%.0f"),
         "Avg Positivity %": st.column_config.NumberColumn(format="%.1f%%"),
-        "Share of Total %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0,
-                                                              max_value=float(grp["Share of Total %"].max() or 1)),
+        "Share of Total %": st.column_config.ProgressColumn(
+            format="%.1f%%", min_value=0, max_value=float(grp["Share of Total %"].max() or 1)
+        ),
     },
     height=380,
 )
