@@ -1,15 +1,16 @@
 """
 MSU · IDSP Disease Surveillance Report — Nagpur
-Professional Dynamic Dashboard built with Streamlit & Plotly.
+Executive Power BI-Style Streamlit Dashboard.
 
 Features:
-- Live Google Sheets sync with local CSV backup fallback.
-- Large, visible custom KPI signages (Tablet, Test Tube, Microscope, Lab Coat, Data Chart).
-- Standalone NMC vs Outside Cases section with its own search box.
-- Separate 3D-style charts for P-Form and L-Form daily/weekly/monthly trends.
-- Aligned Top Conditions Breakdown & Summary Matrix.
+- Dual Logo Header (NCDC Delhi Left, NMC Nagpur Right).
+- Cohesive Soft Ice/Slate Full-Dashboard Background Theme.
+- Live Google Sheets Sync with local CSV backup fallback.
+- Large Custom Signages on KPI Cards.
+- Standalone NMC vs Outside Cases Section with search box.
 """
 
+import base64
 import io
 from datetime import datetime
 from pathlib import Path
@@ -27,16 +28,19 @@ GOOGLE_SHEET_CSV_URL = (
 
 DATA_PATH = Path(__file__).parent / "data" / "MSU_IDSP_Disease_Surveillance.csv"
 
-# Professional Dynamic Color Palette
+# Logo file paths (ensure these image files are inside your root folder or assets folder)
+NCDC_LOGO_PATH = Path(__file__).parent / "NCDC_India_Logo_2020-removebg-preview.png"
+NMC_LOGO_PATH = Path(__file__).parent / "Nagpur_Municipal_Corporation_logo__2_-removebg-preview.png"
+
+# Professional Color Palette
 PALETTE = {
-    "primary": "#2563EB",     # Royal Blue
-    "secondary": "#7C3AED",   # Deep Violet
+    "primary": "#1E40AF",     # Executive Blue
+    "secondary": "#6D28D9",   # Deep Purple
     "teal": "#0D9488",        # Vibrant Teal
-    "amber": "#D97706",       # Bright Amber
-    "rose": "#E11D48",        # Crimson Red
-    "emerald": "#059669",     # Emerald Green
-    "cyan": "#06B6D4",        # Cyan/Sky
-    "dark_bg": "#0F172A",     # Slate Dark Header
+    "amber": "#D97706",       # Deep Amber
+    "rose": "#BE123C",        # Crimson Rose
+    "emerald": "#047857",     # Deep Emerald
+    "bg_main": "#F1F5F9",     # Soft Slate Background
 }
 
 REQUIRED_COLUMNS = [
@@ -51,73 +55,87 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ----------------------------------------------------------------------------
-# Custom CSS (Big Header, Large Visible KPI Signages & 3D Cards)
-# ----------------------------------------------------------------------------
-st.markdown("""
-<style>
-html, body, [class*="css"] { font-family: "Segoe UI", -apple-system, Arial, sans-serif; }
-.block-container { padding-top: 1rem; padding-bottom: 2rem; max-width: 1450px; }
-#MainMenu, footer, header {visibility: hidden;}
+# Function to encode local images to Base64 for inline HTML embedding
+def get_image_base64(path):
+    if path.exists():
+        with open(path, "rb") as image_file:
+            return f"data:image/png;base64,{base64.b64encode(image_file.read()).decode()}"
+    return ""
 
-/* Prominent, Big & Bold Title Banner */
-.titlebar {
+ncdc_logo_b64 = get_image_base64(NCDC_LOGO_PATH)
+nmc_logo_b64 = get_image_base64(NMC_LOGO_PATH)
+
+# ----------------------------------------------------------------------------
+# Custom CSS (Full Dashboard Background + Dual Logo Banner)
+# ----------------------------------------------------------------------------
+st.markdown(f"""
+<style>
+/* Full Page Background */
+.stApp {{
+  background-color: #F1F5F9;
+  font-family: "Segoe UI", -apple-system, Arial, sans-serif;
+}}
+
+.block-container {{ padding-top: 1rem; padding-bottom: 2rem; max-width: 1480px; }}
+#MainMenu, footer, header {{visibility: hidden;}}
+
+/* Executive Dual-Logo Banner */
+.titlebar {{
   background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
   color: #FFFFFF;
-  padding: 16px 24px;
+  padding: 12px 24px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-.titlebar .brand {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  color: #F8FAFC;
+}}
+.titlebar .brand-container {{
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-.titlebar .dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #10B981;
-  box-shadow: 0 0 8px #10B981;
-  display: inline-block;
-}
-.titlebar .subtext {
-  font-size: 12px;
+  gap: 16px;
+  text-align: center;
+}}
+.titlebar .brand-title {{
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #FFFFFF;
+  line-height: 1.2;
+}}
+.titlebar .subtext {{
+  font-size: 11px;
   color: #94A3B8;
   font-weight: 500;
-}
+  margin-top: 4px;
+}}
+.header-logo {{
+  height: 65px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}}
 
-/* 3D Dynamic KPI Cards with Large Signages */
-.pbi-card {
-  background: linear-gradient(145deg, #FFFFFF, #F8FAFC);
+/* 3D Dynamic KPI Cards */
+.pbi-card {{
+  background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  box-shadow: 4px 4px 10px rgba(0,0,0,0.05), -2px -2px 6px rgba(255,255,255,0.8);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
   padding: 14px 16px;
   margin-bottom: 8px;
-  transition: transform 0.2s ease;
-}
-.pbi-card:hover { transform: translateY(-2px); }
-.kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; }
-.kpi-value-container { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
-.kpi-value { font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; }
+}}
+.kpi-label {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; }}
+.kpi-value-container {{ display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }}
+.kpi-value {{ font-size: 26px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; }}
+.kpi-signage {{ font-size: 32px; line-height: 1; margin-left: 8px; }}
+.kpi-accent {{ height: 4px; border-radius: 2px; margin-bottom: 8px; }}
 
-/* Large Signage/Icon Styling */
-.kpi-signage { font-size: 32px; line-height: 1; margin-left: 8px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); }
-.kpi-accent { height: 4px; border-radius: 2px; margin-bottom: 8px; }
+.badge-ok {{ background: #DCFCE7; color: #15803D; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; }}
+.badge-warn {{ background: #FEE2E2; color: #B91C1C; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; }}
 
-.badge-ok { background: #DCFCE7; color: #15803D; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; }
-.badge-warn { background: #FEE2E2; color: #B91C1C; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; }
-
-.section-title { font-size: 14px; font-weight: 800; color: #0F172A; margin: 8px 0 8px 2px; text-transform: uppercase; letter-spacing: 0.4px; }
+.section-title {{ font-size: 14px; font-weight: 800; color: #0F172A; margin: 8px 0 8px 2px; text-transform: uppercase; letter-spacing: 0.4px; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -242,24 +260,32 @@ if sel_diseases:
     filtered = filtered[filtered["Disease"].isin(sel_diseases)]
 
 # ----------------------------------------------------------------------------
-# Header Title Bar (Big & Bold Styling)
+# Dual Logo Header Title Bar
 # ----------------------------------------------------------------------------
 badge = ('<span class="badge-ok">✓ Reconciled</span>' if meta["reconciles"] else '<span class="badge-warn">⚠ Check Totals</span>')
+
 st.markdown(f"""
 <div class="titlebar">
-  <div class="brand">
-    <span class="dot"></span> 
-    MSU · IDSP Disease Surveillance Report — Nagpur
+  <div>
+    <img src="{ncdc_logo_b64}" class="header-logo" alt="NCDC Logo"/>
   </div>
-  <div class="subtext">
-    Source: <b>{source_label}</b> &nbsp;·&nbsp; {meta['rows']:,} Records &nbsp;·&nbsp;
-    Refreshed {st.session_state.last_refreshed.strftime('%d %b %Y, %H:%M')} &nbsp;·&nbsp; {badge}
+  <div class="brand-container">
+    <div>
+      <div class="brand-title">MSU · IDSP Disease Surveillance Report — Nagpur</div>
+      <div class="subtext">
+        Source: <b>{source_label}</b> &nbsp;·&nbsp; {meta['rows']:,} Records &nbsp;·&nbsp;
+        Refreshed {st.session_state.last_refreshed.strftime('%d %b %Y, %H:%M')} &nbsp;·&nbsp; {badge}
+      </div>
+    </div>
+  </div>
+  <div>
+    <img src="{nmc_logo_b64}" class="header-logo" alt="NMC Logo"/>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------
-# KPI Cards with Specific Large Signages
+# KPI Cards with Large Custom Signages
 # ----------------------------------------------------------------------------
 total_pform = filtered["P Form"].fillna(0).sum()
 total_lform = filtered["L Form"].fillna(0).sum()
@@ -269,11 +295,11 @@ avg_positivity = pos_rows.mean() if len(pos_rows) else 0
 active_diseases = filtered.loc[(filtered["P Form"].fillna(0) + filtered["L Form"].fillna(0)) > 0, "Disease"].nunique()
 
 kpis = [
-    ("Total P-Form Cases", f"{total_pform:,.0f}", PALETTE["primary"], "💊"),      # Medicine Tablet
-    ("Total L-Form Cases", f"{total_lform:,.0f}", PALETTE["secondary"], "🧪"),    # Test Tube
-    ("Samples Tested", f"{total_tested:,.0f}", PALETTE["amber"], "🔬"),         # Microscope
-    ("Avg Lab Positivity", f"{avg_positivity:.1f}%", PALETTE["rose"], "🥼"),      # Lab Coat
-    ("Diseases Reporting", f"{active_diseases:,}", PALETTE["emerald"], "📊"),    # Data Chart
+    ("Total P-Form Cases", f"{total_pform:,.0f}", PALETTE["primary"], "💊"),
+    ("Total L-Form Cases", f"{total_lform:,.0f}", PALETTE["secondary"], "🧪"),
+    ("Samples Tested", f"{total_tested:,.0f}", PALETTE["amber"], "🔬"),
+    ("Avg Lab Positivity", f"{avg_positivity:.1f}%", PALETTE["rose"], "🥼"),
+    ("Diseases Reporting", f"{active_diseases:,}", PALETTE["emerald"], "📊"),
 ]
 
 cols = st.columns(5)
@@ -293,13 +319,13 @@ for col, (label, value, color, signage) in zip(cols, kpis):
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------
-# 3D Plotly Layout Helper
+# Plotly Card Layout Helper
 # ----------------------------------------------------------------------------
-def apply_3d_pbi_layout(fig, height=320, show_legend=False):
+def apply_pbi_layout(fig, height=320, show_legend=False):
     fig.update_layout(
         height=height,
         margin=dict(l=15, r=15, t=15, b=15),
-        plot_bgcolor="#F8FAFC",
+        plot_bgcolor="#FFFFFF",
         paper_bgcolor="#FFFFFF",
         font=dict(family="Segoe UI, Arial", size=11, color="#334155"),
         showlegend=show_legend,
@@ -311,18 +337,14 @@ def apply_3d_pbi_layout(fig, height=320, show_legend=False):
 
 
 # ----------------------------------------------------------------------------
-# Section 1: Visual Trends (Left: P/L Form Trends, Right: Top Conditions)
+# Section 1: Visual Trends (Left: Form Trends, Right: Top Conditions)
 # ----------------------------------------------------------------------------
 c_left_panel, c_right_panel = st.columns([1.35, 1])
 
-# --- LEFT PANEL: P-Form & L-Form Visual Trends ---
 with c_left_panel:
     st.markdown('<div class="section-title">📊 Visual Trends & Lab Breakdowns</div>', unsafe_allow_html=True)
     
-    main_tabs = st.tabs([
-        "📋 P-Form (Syndromic)", 
-        "🧪 L-Form (Lab Confirmed)"
-    ])
+    main_tabs = st.tabs(["📋 P-Form (Syndromic)", "🧪 L-Form (Lab Confirmed)"])
 
     # 1. P-Form Trends
     with main_tabs[0]:
@@ -331,26 +353,26 @@ with c_left_panel:
             p_daily = filtered.groupby("Date_dt")["P Form"].sum().sort_index()
             fig = go.Figure(go.Scatter(
                 x=p_daily.index, y=p_daily.values, mode="lines+markers",
-                line=dict(color=PALETTE["primary"], width=3, shape="spline"),
-                fill="tozeroy", fillcolor="rgba(37, 99, 235, 0.15)"
+                line=dict(color=PALETTE["primary"], width=3),
+                fill="tozeroy", fillcolor="rgba(30, 64, 175, 0.12)"
             ))
-            st.plotly_chart(apply_3d_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
         with pt_w:
             p_wk = filtered.groupby("Week")["P Form"].sum().sort_index()
             fig = go.Figure(go.Bar(
                 x=[f"W{int(w)}" for w in p_wk.index if pd.notna(w)], y=p_wk.values,
-                marker=dict(color=PALETTE["primary"], line=dict(color="#1D4ED8", width=1.5))
+                marker=dict(color=PALETTE["primary"])
             ))
-            st.plotly_chart(apply_3d_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
         with pt_m:
             p_mo = filtered.groupby("Month")["P Form"].sum()
             fig = go.Figure(go.Bar(
                 x=p_mo.index, y=p_mo.values,
-                marker=dict(color=PALETTE["primary"], line=dict(color="#1D4ED8", width=1.5))
+                marker=dict(color=PALETTE["primary"])
             ))
-            st.plotly_chart(apply_3d_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
     # 2. L-Form Trends
     with main_tabs[1]:
@@ -359,29 +381,28 @@ with c_left_panel:
             l_daily = filtered.groupby("Date_dt")["L Form"].sum().sort_index()
             fig = go.Figure(go.Scatter(
                 x=l_daily.index, y=l_daily.values, mode="lines+markers",
-                line=dict(color=PALETTE["secondary"], width=3, shape="spline"),
-                fill="tozeroy", fillcolor="rgba(124, 58, 237, 0.15)"
+                line=dict(color=PALETTE["secondary"], width=3),
+                fill="tozeroy", fillcolor="rgba(109, 40, 217, 0.12)"
             ))
-            st.plotly_chart(apply_3d_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
         with lt_w:
             l_wk = filtered.groupby("Week")["L Form"].sum().sort_index()
             fig = go.Figure(go.Bar(
                 x=[f"W{int(w)}" for w in l_wk.index if pd.notna(w)], y=l_wk.values,
-                marker=dict(color=PALETTE["secondary"], line=dict(color="#6D28D9", width=1.5))
+                marker=dict(color=PALETTE["secondary"])
             ))
-            st.plotly_chart(apply_3d_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
         with lt_m:
             l_mo = filtered.groupby("Month")["L Form"].sum()
             fig = go.Figure(go.Bar(
                 x=l_mo.index, y=l_mo.values,
-                marker=dict(color=PALETTE["secondary"], line=dict(color="#6D28D9", width=1.5))
+                marker=dict(color=PALETTE["secondary"])
             ))
-            st.plotly_chart(apply_3d_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
 
-# --- RIGHT PANEL: Top Conditions Breakdown ---
 with c_right_panel:
     st.markdown('<div class="section-title">🏆 Top Conditions Breakdown</div>', unsafe_allow_html=True)
     t_d, t_w, t_m = st.tabs(["📅 Daily Avg", "🗓️ Weekly Avg", "📆 Monthly Total"])
@@ -391,31 +412,31 @@ with c_right_panel:
         top_d = (filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1) / n_days).sort_values(ascending=False).head(8).sort_values()
         fig_td = go.Figure(go.Bar(
             x=top_d.values, y=top_d.index, orientation="h",
-            marker=dict(color=PALETTE["teal"], line=dict(color="#0F766E", width=1))
+            marker=dict(color=PALETTE["teal"])
         ))
-        st.plotly_chart(apply_3d_pbi_layout(fig_td, height=360), use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(apply_pbi_layout(fig_td, height=360), use_container_width=True, config={"displayModeBar": False})
 
     with t_w:
         n_wks = filtered["Week"].nunique() or 1
         top_w = (filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1) / n_wks).sort_values(ascending=False).head(8).sort_values()
         fig_tw = go.Figure(go.Bar(
             x=top_w.values, y=top_w.index, orientation="h",
-            marker=dict(color=PALETTE["rose"], line=dict(color="#BE123C", width=1))
+            marker=dict(color=PALETTE["rose"])
         ))
-        st.plotly_chart(apply_3d_pbi_layout(fig_tw, height=360), use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(apply_pbi_layout(fig_tw, height=360), use_container_width=True, config={"displayModeBar": False})
 
     with t_m:
         top_m = filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1).sort_values(ascending=False).head(8).sort_values()
         fig_tm = go.Figure(go.Bar(
             x=top_m.values, y=top_m.index, orientation="h",
-            marker=dict(color=PALETTE["amber"], line=dict(color="#B45309", width=1))
+            marker=dict(color=PALETTE["amber"])
         ))
-        st.plotly_chart(apply_3d_pbi_layout(fig_tm, height=360), use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(apply_pbi_layout(fig_tm, height=360), use_container_width=True, config={"displayModeBar": False})
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------
-# Section 2: STANDALONE NMC VS OUTSIDE CASES VISUALIZATION
+# Section 2: Standalone NMC vs Outside Cases Visualization
 # ----------------------------------------------------------------------------
 st.markdown('<div class="section-title">📍 NMC vs Outside Regional Cases (L-Form Analysis)</div>', unsafe_allow_html=True)
 
@@ -433,14 +454,14 @@ if not nmc_df.empty:
     fig_nmc = go.Figure()
     fig_nmc.add_trace(go.Bar(
         y=nmc_df.index, x=nmc_df["NMC"], name="NMC Cases", orientation="h",
-        marker=dict(color=PALETTE["teal"], line=dict(color="#0F766E", width=1.5))
+        marker=dict(color=PALETTE["teal"])
     ))
     fig_nmc.add_trace(go.Bar(
         y=nmc_df.index, x=nmc_df["Outside"], name="Outside Cases", orientation="h",
-        marker=dict(color=PALETTE["amber"], line=dict(color="#B45309", width=1.5))
+        marker=dict(color=PALETTE["amber"])
     ))
     fig_nmc.update_layout(barmode="group")
-    st.plotly_chart(apply_3d_pbi_layout(fig_nmc, height=350, show_legend=True), use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(apply_pbi_layout(fig_nmc, height=350, show_legend=True), use_container_width=True, config={"displayModeBar": False})
 else:
     st.info("No matching records found for NMC / Outside disease analysis.")
 
@@ -459,7 +480,7 @@ with c_v1:
         labels=vc.index, values=vc.values, hole=0.55,
         marker=dict(colors=[colors_map.get(k, "#94A3B8") for k in vc.index])
     ))
-    st.plotly_chart(apply_3d_pbi_layout(fig_visit, height=270, show_legend=True), use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(apply_pbi_layout(fig_visit, height=270, show_legend=True), use_container_width=True, config={"displayModeBar": False})
 
 with c_v2:
     st.markdown('<div class="section-title">Lab Positivity Rate (%)</div>', unsafe_allow_html=True)
@@ -467,13 +488,13 @@ with c_v2:
     pos = pos.sort_values(ascending=False).head(8)
     fig_pos = go.Figure(go.Bar(
         x=pos.index, y=pos.values,
-        marker=dict(color=PALETTE["rose"], line=dict(color="#BE123C", width=1))
+        marker=dict(color=PALETTE["rose"])
     ))
     fig_pos.update_yaxes(ticksuffix="%")
-    st.plotly_chart(apply_3d_pbi_layout(fig_pos, height=270), use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(apply_pbi_layout(fig_pos, height=270), use_container_width=True, config={"displayModeBar": False})
 
 # ----------------------------------------------------------------------------
-# Section 4: Disease-Wise Summary Data Matrix
+# Section 4: Comprehensive Disease Summary Table
 # ----------------------------------------------------------------------------
 st.markdown('<div class="section-title">📋 Comprehensive Disease Summary Matrix</div>', unsafe_allow_html=True)
 grp = filtered.groupby("Disease").agg(
