@@ -3,7 +3,7 @@ MSU · IDSP Disease Surveillance Report — Nagpur
 Executive Power BI-Style Streamlit Dashboard.
 
 Features:
-- Dual Logo Header (NCDC.png Left, Nagpur_Municipal_Corporation.png Right).
+- Dual Logo Header (NCDC.png Left, NMC.png Right with enlarged dimensions).
 - Cohesive Soft Ice/Slate Full-Dashboard Background Theme.
 - Live Google Sheets Sync with local CSV backup fallback.
 - Large Custom Signages on KPI Cards.
@@ -30,7 +30,7 @@ DATA_PATH = Path(__file__).parent / "data" / "MSU_IDSP_Disease_Surveillance.csv"
 
 # Updated Logo File Names matching your GitHub Repository
 NCDC_LOGO_PATH = Path(__file__).parent / "NCDC.png"
-NMC_LOGO_PATH = Path(__file__).parent / "Nagpur_Municipal_Corporation.png"
+NMC_LOGO_PATH = Path(__file__).parent / "NMC.png"
 
 # Professional Color Palette
 PALETTE = {
@@ -83,7 +83,7 @@ st.markdown(f"""
 .titlebar {{
   background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
   color: #FFFFFF;
-  padding: 12px 24px;
+  padding: 16px 28px;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -110,11 +110,13 @@ st.markdown(f"""
   font-weight: 500;
   margin-top: 4px;
 }}
+
+/* Increased Logo Dimensions */
 .header-logo {{
-  height: 65px;
+  height: 85px;
   width: auto;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.4));
 }}
 
 /* 3D Dynamic KPI Cards */
