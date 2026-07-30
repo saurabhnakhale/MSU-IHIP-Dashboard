@@ -3,7 +3,7 @@ MSU · IDSP Disease Surveillance Report — Nagpur
 Executive Power BI-Style Streamlit Dashboard.
 
 Features:
-- Dual Logo Header (NCDC Delhi Left, NMC Nagpur Right).
+- Dual Logo Header (NCDC.png Left, Nagpur_Municipal_Corporation.png Right).
 - Cohesive Soft Ice/Slate Full-Dashboard Background Theme.
 - Live Google Sheets Sync with local CSV backup fallback.
 - Large Custom Signages on KPI Cards.
@@ -28,9 +28,9 @@ GOOGLE_SHEET_CSV_URL = (
 
 DATA_PATH = Path(__file__).parent / "data" / "MSU_IDSP_Disease_Surveillance.csv"
 
-# Logo file paths (ensure these image files are inside your root folder or assets folder)
-NCDC_LOGO_PATH = Path(__file__).parent / "NCDC_India_Logo_2020-removebg-preview.png"
-NMC_LOGO_PATH = Path(__file__).parent / "Nagpur_Municipal_Corporation_logo__2_-removebg-preview.png"
+# Updated Logo File Names matching your GitHub Repository
+NCDC_LOGO_PATH = Path(__file__).parent / "NCDC.png"
+NMC_LOGO_PATH = Path(__file__).parent / "Nagpur_Municipal_Corporation.png"
 
 # Professional Color Palette
 PALETTE = {
