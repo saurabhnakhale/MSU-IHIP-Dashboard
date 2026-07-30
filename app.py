@@ -5,8 +5,8 @@ Power BI-style live dashboard built with Streamlit.
 Data flow
 ---------
 - Reads published Google Sheet directly (with local CSV fallback).
-- Interactive tabs for Daily, Weekly, and Monthly breakdown of P-Form and L-Form cases.
-- Dynamic Top Reported Conditions breakdown across Daily, Weekly, and Monthly aggregations.
+- Includes Date Range and Month filters alongside Epi Week and Visit Status.
+- Features separate graphical views for P-Form and L-Form cases across Daily, Weekly, and Monthly aggregations.
 """
 
 import io
@@ -82,6 +82,7 @@ hr { margin: 0.6rem 0; }
 </style>
 """, unsafe_allow_html=True)
 
+
 # ----------------------------------------------------------------------------
 # Data loading + validation
 # ----------------------------------------------------------------------------
@@ -106,7 +107,7 @@ def validate_and_clean(df: pd.DataFrame):
     df["Disease"] = df["Disease"].astype(str).str.strip()
     df = df[df["Disease"].notna() & (df["Disease"] != "") & (df["Disease"] != "nan")]
 
-    # Standardize Datetime Column for Daily/Monthly Grouping
+    # Parse dates properly for filtering & charting
     df["Date_dt"] = pd.to_datetime(df["Date"], errors="coerce")
 
     sums = {
@@ -162,15 +163,36 @@ if not meta["ok"]:
     st.error(f"Could not load data — missing required columns: {', '.join(meta['missing'])}")
     st.stop()
 
-# Sidebar filters
+# ----------------------------------------------------------------------------
+# Sidebar Slicers (Date Range, Month, Epi Week, Status, Disease)
+# ----------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("### 🔎 Filters")
+
+    # 1. Date Range Filter
+    min_date = df["Date_dt"].min().date() if df["Date_dt"].notna().any() else datetime.today().date()
+    max_date = df["Date_dt"].max().date() if df["Date_dt"].notna().any() else datetime.today().date()
+    
+    date_range = st.date_input(
+        "Date Range",
+        value=(min_date, max_date),
+        min_value=min_date,
+        max_value=max_date
+    )
+
+    # 2. Month Filter
+    months = sorted(df["Month"].dropna().unique().tolist())
+    sel_months = st.multiselect("Month", months, default=[])
+
+    # 3. Epi Week Filter
     weeks = sorted(df["Week"].dropna().unique().tolist())
     sel_weeks = st.multiselect("Epi Week", weeks, default=[])
 
+    # 4. Visit Status Filter
     statuses = sorted(df["Visit Status"].dropna().unique().tolist())
     sel_status = st.multiselect("Visit Status", statuses, default=[])
 
+    # 5. Disease Search / Multi-select
     disease_totals = (df.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1).sort_values(ascending=False))
     search = st.text_input("Search disease")
     disease_options = [d for d in disease_totals.index if search.lower() in d.lower()]
@@ -179,7 +201,16 @@ with st.sidebar:
     if st.button("Clear all filters", use_container_width=True):
         st.rerun()
 
+# Apply Filters
 filtered = df.copy()
+
+# Date range filtering
+if isinstance(date_range, tuple) and len(date_range) == 2:
+    start_date, end_date = date_range
+    filtered = filtered[(filtered["Date_dt"].dt.date >= start_date) & (filtered["Date_dt"].dt.date <= end_date)]
+
+if sel_months:
+    filtered = filtered[filtered["Month"].isin(sel_months)]
 if sel_weeks:
     filtered = filtered[filtered["Week"].isin(sel_weeks)]
 if sel_status:
@@ -188,7 +219,7 @@ if sel_diseases:
     filtered = filtered[filtered["Disease"].isin(sel_diseases)]
 
 # ----------------------------------------------------------------------------
-# Header / Title bar
+# Header Bar
 # ----------------------------------------------------------------------------
 badge = ('<span class="badge-ok">✓ Reconciled</span>' if meta["reconciles"] else '<span class="badge-warn">⚠ Check totals</span>')
 st.markdown(f"""
@@ -200,7 +231,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------
-# KPI row
+# KPI Cards
 # ----------------------------------------------------------------------------
 total_pform = filtered["P Form"].fillna(0).sum()
 total_lform = filtered["L Form"].fillna(0).sum()
@@ -229,14 +260,14 @@ for col, (label, value, color) in zip(cols, kpis):
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Helper layout function for charts
-def pbi_layout(fig, height=320, legend=True):
+# Helper layout for Plotly
+def pbi_layout(fig, height=300, show_legend=False):
     fig.update_layout(
         height=height, margin=dict(l=10, r=10, t=10, b=10),
         plot_bgcolor="white", paper_bgcolor="white",
         font=dict(family="Segoe UI, Arial", size=11, color="#605E5C"),
-        showlegend=legend,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5) if legend else None,
+        showlegend=show_legend,
+        legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5) if show_legend else None,
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="#EDEBE9", zeroline=False)
@@ -244,74 +275,97 @@ def pbi_layout(fig, height=320, legend=True):
 
 
 # ----------------------------------------------------------------------------
-# Dynamic Graphs Section: Case Trends & Top Conditions
+# Separate Graphical View Section for P-Form and L-Form
 # ----------------------------------------------------------------------------
-c_left, c_right = st.columns([1.3, 1])
+st.markdown('<div class="section-title">📊 Separate Form Trends (Daily / Weekly / Monthly)</div>', unsafe_allow_html=True)
 
-with c_left:
-    st.markdown('<div class="section-title">Case Trends (P-Form vs L-Form)</div>', unsafe_allow_html=True)
-    tab_daily, tab_weekly, tab_monthly = st.tabs(["📅 Daily", "🗓️ Weekly", "📆 Monthly"])
-
-    # 1. Daily View
-    with tab_daily:
-        daily_df = filtered.groupby("Date_dt")[["P Form", "L Form"]].sum().sort_index()
-        fig_daily = go.Figure()
-        fig_daily.add_trace(go.Scatter(x=daily_df.index, y=daily_df["P Form"], name="P-Form (Daily)", line=dict(color=PALETTE["blue"], width=2)))
-        fig_daily.add_trace(go.Scatter(x=daily_df.index, y=daily_df["L Form"], name="L-Form (Daily)", line=dict(color=PALETTE["violet"], width=2)))
-        st.plotly_chart(pbi_layout(fig_daily), use_container_width=True, config={"displayModeBar": False})
-
-    # 2. Weekly View
-    with tab_weekly:
-        weekly_df = filtered.groupby("Week")[["P Form", "L Form"]].sum().sort_index()
-        fig_weekly = go.Figure()
-        fig_weekly.add_bar(x=[f"W{int(w)}" for w in weekly_df.index if pd.notna(w)], y=weekly_df["P Form"], name="P-Form (Weekly)", marker_color=PALETTE["blue"])
-        fig_weekly.add_bar(x=[f"W{int(w)}" for w in weekly_df.index if pd.notna(w)], y=weekly_df["L Form"], name="L-Form (Weekly)", marker_color=PALETTE["violet"])
-        fig_weekly.update_layout(barmode="group")
-        st.plotly_chart(pbi_layout(fig_weekly), use_container_width=True, config={"displayModeBar": False})
-
-    # 3. Monthly View
-    with tab_monthly:
-        monthly_df = filtered.groupby("Month")[["P Form", "L Form"]].sum()
-        fig_monthly = go.Figure()
-        fig_monthly.add_bar(x=monthly_df.index, y=monthly_df["P Form"], name="P-Form (Monthly)", marker_color=PALETTE["blue"])
-        fig_monthly.add_bar(x=monthly_df.index, y=monthly_df["L Form"], name="L-Form (Monthly)", marker_color=PALETTE["violet"])
-        fig_monthly.update_layout(barmode="group")
-        st.plotly_chart(pbi_layout(fig_monthly), use_container_width=True, config={"displayModeBar": False})
-
-with c_right:
-    st.markdown('<div class="section-title">Top Reported Conditions</div>', unsafe_allow_html=True)
-    t_top_daily, t_top_weekly, t_top_monthly = st.tabs(["📅 Daily Avg", "🗓️ Weekly Total", "📆 Monthly Total"])
-
-    # Daily Avg Top Conditions
-    with t_top_daily:
-        num_days = filtered["Date_dt"].nunique() or 1
-        top_daily = (filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1) / num_days).sort_values(ascending=False).head(8).sort_values()
-        fig_top_d = go.Figure(go.Bar(x=top_daily.values, y=top_daily.index, orientation="h", marker_color=PALETTE["orange"]))
-        fig_top_d.update_layout(xaxis_title="Avg Cases / Day")
-        st.plotly_chart(pbi_layout(fig_top_d, legend=False), use_container_width=True, config={"displayModeBar": False})
-
-    # Weekly Total Top Conditions
-    with t_top_weekly:
-        num_weeks = filtered["Week"].nunique() or 1
-        top_weekly = (filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1) / num_weeks).sort_values(ascending=False).head(8).sort_values()
-        fig_top_w = go.Figure(go.Bar(x=top_weekly.values, y=top_weekly.index, orientation="h", marker_color=PALETTE["pink"]))
-        fig_top_w.update_layout(xaxis_title="Avg Cases / Week")
-        st.plotly_chart(pbi_layout(fig_top_w, legend=False), use_container_width=True, config={"displayModeBar": False})
-
-    # Monthly Total Top Conditions
-    with t_top_monthly:
-        top_monthly = filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1).sort_values(ascending=False).head(8).sort_values()
-        fig_top_m = go.Figure(go.Bar(x=top_monthly.values, y=top_monthly.index, orientation="h", marker_color=PALETTE["mustard"]))
-        fig_top_m.update_layout(xaxis_title="Total Cases")
-        st.plotly_chart(pbi_layout(fig_top_m, legend=False), use_container_width=True, config={"displayModeBar": False})
+form_tab_p, form_tab_l = st.tabs(["🔹 P-Form Analysis (Syndromic)", "🟣 L-Form Analysis (Lab Confirmed)"])
 
 # ----------------------------------------------------------------------------
-# Row 2: Visit Donut + Lab Positivity
+# P-Form Tab
 # ----------------------------------------------------------------------------
+with form_tab_p:
+    p_d, p_w, p_m = st.tabs(["📅 Daily P-Form", "🗓️ Weekly P-Form", "📆 Monthly P-Form"])
+
+    with p_d:
+        p_daily = filtered.groupby("Date_dt")["P Form"].sum().sort_index()
+        fig_pd = go.Figure(go.Scatter(
+            x=p_daily.index, y=p_daily.values, mode="lines", fill="tozeroy",
+            line=dict(color=PALETTE["blue"], width=2), fillcolor="rgba(17,141,255,0.12)"
+        ))
+        st.plotly_chart(pbi_layout(fig_pd), use_container_width=True, config={"displayModeBar": False})
+
+    with p_w:
+        p_wk = filtered.groupby("Week")["P Form"].sum().sort_index()
+        fig_pw = go.Figure(go.Bar(
+            x=[f"W{int(w)}" for w in p_wk.index if pd.notna(w)], y=p_wk.values, marker_color=PALETTE["blue"]
+        ))
+        st.plotly_chart(pbi_layout(fig_pw), use_container_width=True, config={"displayModeBar": False})
+
+    with p_m:
+        p_mo = filtered.groupby("Month")["P Form"].sum()
+        fig_pm = go.Figure(go.Bar(
+            x=p_mo.index, y=p_mo.values, marker_color=PALETTE["blue"]
+        ))
+        st.plotly_chart(pbi_layout(fig_pm), use_container_width=True, config={"displayModeBar": False})
+
+# ----------------------------------------------------------------------------
+# L-Form Tab
+# ----------------------------------------------------------------------------
+with form_tab_l:
+    l_d, l_w, l_m = st.tabs(["📅 Daily L-Form", "🗓️ Weekly L-Form", "📆 Monthly L-Form"])
+
+    with l_d:
+        l_daily = filtered.groupby("Date_dt")["L Form"].sum().sort_index()
+        fig_ld = go.Figure(go.Scatter(
+            x=l_daily.index, y=l_daily.values, mode="lines", fill="tozeroy",
+            line=dict(color=PALETTE["violet"], width=2), fillcolor="rgba(116,78,194,0.12)"
+        ))
+        st.plotly_chart(pbi_layout(fig_ld), use_container_width=True, config={"displayModeBar": False})
+
+    with l_w:
+        l_wk = filtered.groupby("Week")["L Form"].sum().sort_index()
+        fig_lw = go.Figure(go.Bar(
+            x=[f"W{int(w)}" for w in l_wk.index if pd.notna(w)], y=l_wk.values, marker_color=PALETTE["violet"]
+        ))
+        st.plotly_chart(pbi_layout(fig_lw), use_container_width=True, config={"displayModeBar": False})
+
+    with l_m:
+        l_mo = filtered.groupby("Month")["L Form"].sum()
+        fig_lm = go.Figure(go.Bar(
+            x=l_mo.index, y=l_mo.values, marker_color=PALETTE["violet"]
+        ))
+        st.plotly_chart(pbi_layout(fig_lm), use_container_width=True, config={"displayModeBar": False})
+
 st.markdown("<br>", unsafe_allow_html=True)
-c_v1, c_v2 = st.columns(2)
 
-with c_v1:
+# ----------------------------------------------------------------------------
+# Top Reported Conditions & Secondary Charts
+# ----------------------------------------------------------------------------
+c_top, c_visit, c_pos = st.columns([1.2, 1, 1])
+
+with c_top:
+    st.markdown('<div class="section-title">Top Conditions Breakdown</div>', unsafe_allow_html=True)
+    t_d, t_w, t_m = st.tabs(["📅 Daily Avg", "🗓️ Weekly Avg", "📆 Monthly Total"])
+
+    with t_d:
+        n_days = filtered["Date_dt"].nunique() or 1
+        top_d = (filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1) / n_days).sort_values(ascending=False).head(7).sort_values()
+        fig_td = go.Figure(go.Bar(x=top_d.values, y=top_d.index, orientation="h", marker_color=PALETTE["orange"]))
+        st.plotly_chart(pbi_layout(fig_td, height=260), use_container_width=True, config={"displayModeBar": False})
+
+    with t_w:
+        n_wks = filtered["Week"].nunique() or 1
+        top_w = (filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1) / n_wks).sort_values(ascending=False).head(7).sort_values()
+        fig_tw = go.Figure(go.Bar(x=top_w.values, y=top_w.index, orientation="h", marker_color=PALETTE["pink"]))
+        st.plotly_chart(pbi_layout(fig_tw, height=260), use_container_width=True, config={"displayModeBar": False})
+
+    with t_m:
+        top_m = filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1).sort_values(ascending=False).head(7).sort_values()
+        fig_tm = go.Figure(go.Bar(x=top_m.values, y=top_m.index, orientation="h", marker_color=PALETTE["mustard"]))
+        st.plotly_chart(pbi_layout(fig_tm, height=260), use_container_width=True, config={"displayModeBar": False})
+
+with c_visit:
     st.markdown('<div class="section-title">Field Visit Status</div>', unsafe_allow_html=True)
     vc = filtered["Visit Status"].value_counts()
     colors_map = {"Traced": PALETTE["green"], "Visited": PALETTE["blue"], "Untraced": PALETTE["red"]}
@@ -319,15 +373,15 @@ with c_v1:
         labels=vc.index, values=vc.values, hole=0.6,
         marker_colors=[colors_map.get(k, "#8A8886") for k in vc.index]
     ))
-    st.plotly_chart(pbi_layout(fig_visit, height=260, legend=True), use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(pbi_layout(fig_visit, height=290, show_legend=True), use_container_width=True, config={"displayModeBar": False})
 
-with c_v2:
+with c_pos:
     st.markdown('<div class="section-title">Lab Positivity Rate</div>', unsafe_allow_html=True)
     pos = filtered.dropna(subset=["Positivity Rate"]).groupby("Disease")["Positivity Rate"].mean()
-    pos = pos.sort_values(ascending=False).head(8)
+    pos = pos.sort_values(ascending=False).head(7)
     fig_pos = go.Figure(go.Bar(x=pos.index, y=pos.values, marker_color=PALETTE["red"]))
     fig_pos.update_yaxes(ticksuffix="%")
-    st.plotly_chart(pbi_layout(fig_pos, height=260, legend=False), use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(pbi_layout(fig_pos, height=290), use_container_width=True, config={"displayModeBar": False})
 
 # ----------------------------------------------------------------------------
 # Summary Table
