@@ -76,8 +76,14 @@ st.markdown(f"""
   font-family: "Segoe UI", -apple-system, Arial, sans-serif;
 }}
 
-/* Aggressively reduced padding to push the banner to the very top */
-.block-container {{ padding-top: 1rem !important; padding-bottom: 2rem; max-width: 1480px; }}
+/* Expand dashboard to screen edges by removing max-width and overriding side paddings */
+.block-container {{ 
+  padding-top: 1rem !important; 
+  padding-bottom: 2rem !important; 
+  padding-left: 1.5rem !important; 
+  padding-right: 1.5rem !important; 
+  max-width: 100% !important; 
+}}
 
 /* Keep the Streamlit header transparent so it doesn't block the pushed-up content */
 [data-testid="stHeader"] {{
