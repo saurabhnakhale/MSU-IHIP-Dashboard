@@ -8,7 +8,7 @@ Features:
 - Live Google Sheets Sync with local CSV backup fallback.
 - Large Custom Signages on KPI Cards.
 - Sequential/Cascading Filters (Dropdowns update based on previous selections).
-- Linked Analysis: Form Selection dynamically updates both Trend and Condition charts.
+- Linked Analysis: Form & Time selections dynamically update BOTH left and right panels.
 - Standalone NMC vs Outside Cases Section with search box.
 """
 
@@ -405,14 +405,22 @@ c_left_panel, c_right_panel = st.columns([1.35, 1])
 with c_left_panel:
     st.markdown('<div class="section-title">📊 Visual Trends & Lab Breakdowns</div>', unsafe_allow_html=True)
     
-    # Using st.radio disguised as a toggle to capture the selected state.
-    # This allows the right column to "know" which form is currently being analyzed.
-    form_choice = st.radio(
-        "Select Form Type for Analysis:",
-        ["📋 P-Form (Syndromic)", "🧪 L-Form (Lab Confirmed)"],
-        horizontal=True,
-        label_visibility="collapsed"
-    )
+    # Master controls for both left and right charts
+    c_form, c_time = st.columns([1.2, 1])
+    with c_form:
+        form_choice = st.radio(
+            "Select Form Type:",
+            ["📋 P-Form (Syndromic)", "🧪 L-Form (Lab Confirmed)"],
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+    with c_time:
+        time_choice = st.radio(
+            "Select Time Granularity:",
+            ["📅 Daily", "🗓️ Weekly", "📆 Monthly"],
+            horizontal=True,
+            label_visibility="collapsed"
+        )
 
     # Dynamic variables based on selection
     is_pform = "P-Form" in form_choice
@@ -420,9 +428,8 @@ with c_left_panel:
     trend_color = PALETTE["primary"] if is_pform else PALETTE["secondary"]
     fill_color = "rgba(30, 64, 175, 0.12)" if is_pform else "rgba(109, 40, 217, 0.12)"
     
-    t_d, t_w, t_m = st.tabs(["Daily", "Weekly", "Monthly"])
-    
-    with t_d:
+    # Render Left Chart based on Master Time Toggle
+    if "Daily" in time_choice:
         daily_data = filtered.groupby("Date_dt")[target_col].sum().sort_index() if not filtered.empty else pd.Series(dtype=float)
         fig = go.Figure(go.Scatter(
             x=daily_data.index, y=daily_data.values, mode="lines+markers",
@@ -431,7 +438,7 @@ with c_left_panel:
         ))
         st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False}, key="trend_daily")
 
-    with t_w:
+    elif "Weekly" in time_choice:
         wk_data = filtered.groupby("Week")[target_col].sum().sort_index() if not filtered.empty else pd.Series(dtype=float)
         fig = go.Figure(go.Bar(
             x=[f"W{int(w)}" for w in wk_data.index if pd.notna(w)], y=wk_data.values,
@@ -439,7 +446,7 @@ with c_left_panel:
         ))
         st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False}, key="trend_weekly")
 
-    with t_m:
+    elif "Monthly" in time_choice:
         mo_data = filtered.groupby("Month")[target_col].sum() if not filtered.empty else pd.Series(dtype=float)
         fig = go.Figure(go.Bar(
             x=mo_data.index, y=mo_data.values,
@@ -449,11 +456,18 @@ with c_left_panel:
 
 
 with c_right_panel:
+    # Right panel title dynamically reflects both Form and Time choices
     form_label = "P-Form" if is_pform else "L-Form"
-    st.markdown(f'<div class="section-title">🏆 Top Conditions ({form_label})</div>', unsafe_allow_html=True)
-    t_td, t_tw, t_tm = st.tabs(["📅 Daily Avg", "🗓️ Weekly Avg", "📆 Monthly Total"])
+    time_label = time_choice.split()[1] # Extracts "Daily", "Weekly", or "Monthly"
+    metric_label = "Avg" if time_label != "Monthly" else "Total"
+    
+    st.markdown(f'<div class="section-title">🏆 Top Conditions ({form_label} - {time_label} {metric_label})</div>', unsafe_allow_html=True)
+    
+    # Spacer to align the top of this chart with the left chart (compensating for the height of the toggle buttons)
+    st.markdown("<div style='height: 38px;'></div>", unsafe_allow_html=True)
 
-    with t_td:
+    # Render Right Chart based on Master Time Toggle
+    if "Daily" in time_choice:
         n_days = filtered["Date_dt"].nunique() or 1
         top_d = (filtered.groupby("Disease")[target_col].sum() / n_days).sort_values(ascending=False).head(8).sort_values() if not filtered.empty else pd.Series(dtype=float)
         fig_td = go.Figure(go.Bar(
@@ -462,7 +476,7 @@ with c_right_panel:
         ))
         st.plotly_chart(apply_pbi_layout(fig_td, height=360), use_container_width=True, config={"displayModeBar": False}, key="top_daily")
 
-    with t_tw:
+    elif "Weekly" in time_choice:
         n_wks = filtered["Week"].nunique() or 1
         top_w = (filtered.groupby("Disease")[target_col].sum() / n_wks).sort_values(ascending=False).head(8).sort_values() if not filtered.empty else pd.Series(dtype=float)
         fig_tw = go.Figure(go.Bar(
@@ -471,7 +485,7 @@ with c_right_panel:
         ))
         st.plotly_chart(apply_pbi_layout(fig_tw, height=360), use_container_width=True, config={"displayModeBar": False}, key="top_weekly")
 
-    with t_tm:
+    elif "Monthly" in time_choice:
         top_m = filtered.groupby("Disease")[target_col].sum().sort_values(ascending=False).head(8).sort_values() if not filtered.empty else pd.Series(dtype=float)
         fig_tm = go.Figure(go.Bar(
             x=top_m.values, y=top_m.index, orientation="h",
