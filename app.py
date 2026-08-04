@@ -77,7 +77,9 @@ st.markdown(f"""
 }}
 
 .block-container {{ padding-top: 1rem; padding-bottom: 2rem; max-width: 1480px; }}
-#MainMenu, footer {visibility: hidden;}
+
+/* Removed 'header' from hidden elements so sidebar toggle remains visible */
+#MainMenu, footer {{visibility: hidden;}}
 
 /* Executive Dual-Logo Banner */
 .titlebar {{
