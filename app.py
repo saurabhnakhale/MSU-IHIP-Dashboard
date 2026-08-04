@@ -76,10 +76,10 @@ st.markdown(f"""
   font-family: "Segoe UI", -apple-system, Arial, sans-serif;
 }}
 
-/* Adjusted padding for a narrow top margin without cropping */
-.block-container {{ padding-top: 2rem !important; padding-bottom: 2rem; max-width: 1480px; }}
+/* Aggressively reduced padding to push the banner to the very top */
+.block-container {{ padding-top: 1rem !important; padding-bottom: 2rem; max-width: 1480px; }}
 
-/* Make the Streamlit header transparent to prevent cropping the custom titlebar */
+/* Keep the Streamlit header transparent so it doesn't block the pushed-up content */
 [data-testid="stHeader"] {{
   background-color: transparent !important;
 }}
@@ -88,6 +88,7 @@ st.markdown(f"""
 [data-testid="stToolbar"] {{
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
+  z-index: 9999;
 }}
 [data-testid="stToolbar"]:hover {{
   opacity: 1;
