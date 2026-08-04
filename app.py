@@ -270,19 +270,17 @@ if not meta["ok"]:
 # ----------------------------------------------------------------------------
 with st.sidebar:
     
-    # Matching the new layout: Filters title alongside the Reset button
     c_title, c_reset = st.columns([2, 1])
     with c_title:
         st.markdown("<h3 style='margin-bottom: 0px;'>Filters 🔍</h3>", unsafe_allow_html=True)
     with c_reset:
         if st.button("Reset", use_container_width=True):
-            st.session_state.filter_key += 1 # Update key to flush UI state
+            st.session_state.filter_key += 1 
             st.rerun()
 
     min_date = df["Date_dt"].min().date() if df["Date_dt"].notna().any() else datetime.today().date()
     max_date = df["Date_dt"].max().date() if df["Date_dt"].notna().any() else datetime.today().date()
     
-    # Split Date Inputs layout (From / To)
     st.markdown("<div style='font-size: 14px; font-weight: 600; color: #334155; margin-bottom: -15px; margin-top: 10px;'>Date Window</div>", unsafe_allow_html=True)
     col_start, col_end = st.columns(2)
     with col_start:
@@ -298,7 +296,7 @@ with st.sidebar:
     disease_options = disease_totals.index.tolist()
     sel_diseases = st.multiselect("Select Disease", disease_options, default=[], key=f"disease_{st.session_state.filter_key}")
 
-# Apply Filters (Updated logic to handle separate start/end dates)
+# Apply Filters
 filtered = df.copy()
 
 filtered = filtered[(filtered["Date_dt"].dt.date >= start_date) & (filtered["Date_dt"].dt.date <= end_date)]
@@ -338,7 +336,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------
-# KPI Cards with Large Custom Signages
+# KPI Cards
 # ----------------------------------------------------------------------------
 total_pform = filtered["P Form"].fillna(0).sum()
 total_lform = filtered["L Form"].fillna(0).sum()
@@ -403,57 +401,57 @@ with c_left_panel:
     with main_tabs[0]:
         pt_d, pt_w, pt_m = st.tabs(["Daily", "Weekly", "Monthly"])
         with pt_d:
-            p_daily = filtered.groupby("Date_dt")["P Form"].sum().sort_index()
+            p_daily = filtered.groupby("Date_dt")["P Form"].sum().sort_index() if not filtered.empty else pd.Series(dtype=float)
             fig = go.Figure(go.Scatter(
                 x=p_daily.index, y=p_daily.values, mode="lines+markers",
                 line=dict(color=PALETTE["primary"], width=3),
                 fill="tozeroy", fillcolor="rgba(30, 64, 175, 0.12)"
             ))
-            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False}, key="p_daily_chart")
 
         with pt_w:
-            p_wk = filtered.groupby("Week")["P Form"].sum().sort_index()
+            p_wk = filtered.groupby("Week")["P Form"].sum().sort_index() if not filtered.empty else pd.Series(dtype=float)
             fig = go.Figure(go.Bar(
                 x=[f"W{int(w)}" for w in p_wk.index if pd.notna(w)], y=p_wk.values,
                 marker=dict(color=PALETTE["primary"])
             ))
-            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False}, key="p_wk_chart")
 
         with pt_m:
-            p_mo = filtered.groupby("Month")["P Form"].sum()
+            p_mo = filtered.groupby("Month")["P Form"].sum() if not filtered.empty else pd.Series(dtype=float)
             fig = go.Figure(go.Bar(
                 x=p_mo.index, y=p_mo.values,
                 marker=dict(color=PALETTE["primary"])
             ))
-            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False}, key="p_mo_chart")
 
     # 2. L-Form Trends
     with main_tabs[1]:
         lt_d, lt_w, lt_m = st.tabs(["Daily", "Weekly", "Monthly"])
         with lt_d:
-            l_daily = filtered.groupby("Date_dt")["L Form"].sum().sort_index()
+            l_daily = filtered.groupby("Date_dt")["L Form"].sum().sort_index() if not filtered.empty else pd.Series(dtype=float)
             fig = go.Figure(go.Scatter(
                 x=l_daily.index, y=l_daily.values, mode="lines+markers",
                 line=dict(color=PALETTE["secondary"], width=3),
                 fill="tozeroy", fillcolor="rgba(109, 40, 217, 0.12)"
             ))
-            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False}, key="l_daily_chart")
 
         with lt_w:
-            l_wk = filtered.groupby("Week")["L Form"].sum().sort_index()
+            l_wk = filtered.groupby("Week")["L Form"].sum().sort_index() if not filtered.empty else pd.Series(dtype=float)
             fig = go.Figure(go.Bar(
                 x=[f"W{int(w)}" for w in l_wk.index if pd.notna(w)], y=l_wk.values,
                 marker=dict(color=PALETTE["secondary"])
             ))
-            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False}, key="l_wk_chart")
 
         with lt_m:
-            l_mo = filtered.groupby("Month")["L Form"].sum()
+            l_mo = filtered.groupby("Month")["L Form"].sum() if not filtered.empty else pd.Series(dtype=float)
             fig = go.Figure(go.Bar(
                 x=l_mo.index, y=l_mo.values,
                 marker=dict(color=PALETTE["secondary"])
             ))
-            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False}, key="l_mo_chart")
 
 
 with c_right_panel:
@@ -462,29 +460,29 @@ with c_right_panel:
 
     with t_d:
         n_days = filtered["Date_dt"].nunique() or 1
-        top_d = (filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1) / n_days).sort_values(ascending=False).head(8).sort_values()
+        top_d = (filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1) / n_days).sort_values(ascending=False).head(8).sort_values() if not filtered.empty else pd.Series(dtype=float)
         fig_td = go.Figure(go.Bar(
             x=top_d.values, y=top_d.index, orientation="h",
             marker=dict(color=PALETTE["teal"])
         ))
-        st.plotly_chart(apply_pbi_layout(fig_td, height=360), use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(apply_pbi_layout(fig_td, height=360), use_container_width=True, config={"displayModeBar": False}, key="top_d_chart")
 
     with t_w:
         n_wks = filtered["Week"].nunique() or 1
-        top_w = (filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1) / n_wks).sort_values(ascending=False).head(8).sort_values()
+        top_w = (filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1) / n_wks).sort_values(ascending=False).head(8).sort_values() if not filtered.empty else pd.Series(dtype=float)
         fig_tw = go.Figure(go.Bar(
             x=top_w.values, y=top_w.index, orientation="h",
             marker=dict(color=PALETTE["rose"])
         ))
-        st.plotly_chart(apply_pbi_layout(fig_tw, height=360), use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(apply_pbi_layout(fig_tw, height=360), use_container_width=True, config={"displayModeBar": False}, key="top_w_chart")
 
     with t_m:
-        top_m = filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1).sort_values(ascending=False).head(8).sort_values()
+        top_m = filtered.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1).sort_values(ascending=False).head(8).sort_values() if not filtered.empty else pd.Series(dtype=float)
         fig_tm = go.Figure(go.Bar(
             x=top_m.values, y=top_m.index, orientation="h",
             marker=dict(color=PALETTE["amber"])
         ))
-        st.plotly_chart(apply_pbi_layout(fig_tm, height=360), use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(apply_pbi_layout(fig_tm, height=360), use_container_width=True, config={"displayModeBar": False}, key="top_m_chart")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -497,8 +495,8 @@ col_search, _ = st.columns([1, 1])
 with col_search:
     nmc_search = st.text_input("🔍 Search Disease for NMC/Outside Chart", key=f"standalone_nmc_search_{st.session_state.filter_key}")
 
-nmc_df = filtered.groupby("Disease")[["NMC", "Outside"]].sum()
-if nmc_search:
+nmc_df = filtered.groupby("Disease")[["NMC", "Outside"]].sum() if not filtered.empty else pd.DataFrame(columns=["NMC", "Outside"])
+if nmc_search and not nmc_df.empty:
     nmc_df = nmc_df[nmc_df.index.str.lower().str.contains(nmc_search.lower())]
 
 nmc_df = nmc_df[(nmc_df["NMC"] > 0) | (nmc_df["Outside"] > 0)].sort_values(by="NMC", ascending=True).tail(12)
@@ -514,7 +512,7 @@ if not nmc_df.empty:
         marker=dict(color=PALETTE["amber"])
     ))
     fig_nmc.update_layout(barmode="group")
-    st.plotly_chart(apply_pbi_layout(fig_nmc, height=350, show_legend=True), use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(apply_pbi_layout(fig_nmc, height=350, show_legend=True), use_container_width=True, config={"displayModeBar": False}, key="nmc_vs_out_chart")
 else:
     st.info("No matching records found for NMC / Outside disease analysis.")
 
@@ -527,61 +525,65 @@ c_v1, c_v2 = st.columns(2)
 
 with c_v1:
     st.markdown('<div class="section-title">Field Visit Status Breakdown</div>', unsafe_allow_html=True)
-    vc = filtered["Visit Status"].value_counts()
+    vc = filtered["Visit Status"].value_counts() if not filtered.empty else pd.Series(dtype=float)
     colors_map = {"Traced": PALETTE["emerald"], "Visited": PALETTE["primary"], "Untraced": PALETTE["rose"]}
     fig_visit = go.Figure(go.Pie(
         labels=vc.index, values=vc.values, hole=0.55,
         marker=dict(colors=[colors_map.get(k, "#94A3B8") for k in vc.index])
     ))
-    st.plotly_chart(apply_pbi_layout(fig_visit, height=270, show_legend=True), use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(apply_pbi_layout(fig_visit, height=270, show_legend=True), use_container_width=True, config={"displayModeBar": False}, key="visit_pie_chart")
 
 with c_v2:
     st.markdown('<div class="section-title">Lab Positivity Rate (%)</div>', unsafe_allow_html=True)
-    pos = filtered.dropna(subset=["Positivity Rate"]).groupby("Disease")["Positivity Rate"].mean()
+    pos = filtered.dropna(subset=["Positivity Rate"]).groupby("Disease")["Positivity Rate"].mean() if not filtered.empty else pd.Series(dtype=float)
     pos = pos.sort_values(ascending=False).head(8)
     fig_pos = go.Figure(go.Bar(
         x=pos.index, y=pos.values,
         marker=dict(color=PALETTE["rose"])
     ))
     fig_pos.update_yaxes(ticksuffix="%")
-    st.plotly_chart(apply_pbi_layout(fig_pos, height=270), use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(apply_pbi_layout(fig_pos, height=270), use_container_width=True, config={"displayModeBar": False}, key="pos_bar_chart")
 
 # ----------------------------------------------------------------------------
 # Section 4: Comprehensive Disease Summary Table
 # ----------------------------------------------------------------------------
 st.markdown('<div class="section-title">📋 Comprehensive Disease Summary Matrix</div>', unsafe_allow_html=True)
-grp = filtered.groupby("Disease").agg(
-    **{
-        "P-Form": ("P Form", "sum"), 
-        "L-Form": ("L Form", "sum"),
-        "NMC": ("NMC", "sum"),
-        "Outside": ("Outside", "sum"),
-        "Tested": ("Tested Cases", "sum"), 
-        "Avg Positivity %": ("Positivity Rate", "mean")
-    }
-)
-grp = grp[(grp["P-Form"] + grp["L-Form"] + grp["Tested"]) > 0]
-grand_total = (grp["P-Form"] + grp["L-Form"]).sum() or 1
-grp["Share of Total %"] = (grp["P-Form"] + grp["L-Form"]) / grand_total * 100
-grp = grp.sort_values("P-Form", ascending=False).reset_index()
 
-st.dataframe(
-    grp,
-    use_container_width=True,
-    hide_index=True,
-    column_config={
-        "P-Form": st.column_config.NumberColumn(format="%.0f"),
-        "L-Form": st.column_config.NumberColumn(format="%.0f"),
-        "NMC": st.column_config.NumberColumn(format="%.0f"),
-        "Outside": st.column_config.NumberColumn(format="%.0f"),
-        "Tested": st.column_config.NumberColumn(format="%.0f"),
-        "Avg Positivity %": st.column_config.NumberColumn(format="%.1f%%"),
-        "Share of Total %": st.column_config.ProgressColumn(
-            format="%.1f%%", min_value=0, max_value=float(grp["Share of Total %"].max() or 1)
-        ),
-    },
-    height=380,
-)
+if not filtered.empty:
+    grp = filtered.groupby("Disease").agg(
+        **{
+            "P-Form": ("P Form", "sum"), 
+            "L-Form": ("L Form", "sum"),
+            "NMC": ("NMC", "sum"),
+            "Outside": ("Outside", "sum"),
+            "Tested": ("Tested Cases", "sum"), 
+            "Avg Positivity %": ("Positivity Rate", "mean")
+        }
+    )
+    grp = grp[(grp["P-Form"] + grp["L-Form"] + grp["Tested"]) > 0]
+    grand_total = (grp["P-Form"] + grp["L-Form"]).sum() or 1
+    grp["Share of Total %"] = (grp["P-Form"] + grp["L-Form"]) / grand_total * 100
+    grp = grp.sort_values("P-Form", ascending=False).reset_index()
+
+    st.dataframe(
+        grp,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "P-Form": st.column_config.NumberColumn(format="%.0f"),
+            "L-Form": st.column_config.NumberColumn(format="%.0f"),
+            "NMC": st.column_config.NumberColumn(format="%.0f"),
+            "Outside": st.column_config.NumberColumn(format="%.0f"),
+            "Tested": st.column_config.NumberColumn(format="%.0f"),
+            "Avg Positivity %": st.column_config.NumberColumn(format="%.1f%%"),
+            "Share of Total %": st.column_config.ProgressColumn(
+                format="%.1f%%", min_value=0, max_value=float(grp["Share of Total %"].max() or 1)
+            ),
+        },
+        height=380,
+    )
+else:
+    st.info("No data available to display in the summary matrix for the selected filters.")
 
 st.caption(
     f"Source: {source_label} · {meta['rows']:,} records · "
