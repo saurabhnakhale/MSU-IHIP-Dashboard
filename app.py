@@ -85,6 +85,15 @@ st.markdown(f"""
   max-width: 100% !important; 
 }}
 
+/* Aggressively reduce sidebar top padding to prevent scrolling and fit all filters */
+[data-testid="stSidebarUserContent"] {{
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}}
+[data-testid="stSidebar"] > div:first-child {{
+  padding-top: 1.5rem !important;
+}}
+
 /* Keep the Streamlit header transparent so it doesn't block the pushed-up content */
 [data-testid="stHeader"] {{
   background-color: transparent !important;
