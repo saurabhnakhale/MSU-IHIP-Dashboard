@@ -85,13 +85,19 @@ st.markdown(f"""
   max-width: 100% !important; 
 }}
 
-/* Aggressively reduce sidebar top padding to prevent scrolling and fit all filters */
-[data-testid="stSidebarUserContent"] {{
+/* AGGRESSIVELY REDUCE SIDEBAR TOP PADDING */
+[data-testid="stSidebarHeader"] {{
   padding-top: 1rem !important;
-  padding-bottom: 1rem !important;
+  padding-bottom: 0rem !important;
+  min-height: auto !important;
 }}
-[data-testid="stSidebar"] > div:first-child {{
-  padding-top: 1.5rem !important;
+[data-testid="stSidebarUserContent"] {{
+  padding-top: 0rem !important;
+}}
+/* Remove margin from the very first h3 tag in sidebar to push it even higher */
+[data-testid="stSidebarUserContent"] h3:first-of-type {{
+  margin-top: 0rem !important;
+  padding-top: 0rem !important;
 }}
 
 /* Keep the Streamlit header transparent so it doesn't block the pushed-up content */
