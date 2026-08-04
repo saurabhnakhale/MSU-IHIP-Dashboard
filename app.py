@@ -282,8 +282,8 @@ with st.sidebar:
     min_date = df["Date_dt"].min().date() if df["Date_dt"].notna().any() else datetime.today().date()
     max_date = df["Date_dt"].max().date() if df["Date_dt"].notna().any() else datetime.today().date()
     
-    # --- Step 1: Date Window Filter ---
-    st.markdown("<div style='font-size: 14px; font-weight: 600; color: #334155; margin-bottom: -15px; margin-top: 10px;'>Date Window</div>", unsafe_allow_html=True)
+    # --- Step 1: Date Window Filter (Fixed spacing here) ---
+    st.markdown("<div style='font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 0px; margin-top: 10px;'>Date Window</div>", unsafe_allow_html=True)
     col_start, col_end = st.columns(2)
     with col_start:
         start_date = st.date_input("From", value=min_date, min_value=min_date, max_value=max_date, format="DD/MM/YYYY", key=f"start_{st.session_state.filter_key}")
