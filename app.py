@@ -76,9 +76,15 @@ st.markdown(f"""
   font-family: "Segoe UI", -apple-system, Arial, sans-serif;
 }}
 
-.block-container {{ padding-top: 1rem; padding-bottom: 2rem; max-width: 1480px; }}
+/* Adjusted padding for a narrow top margin without cropping */
+.block-container {{ padding-top: 2rem !important; padding-bottom: 2rem; max-width: 1480px; }}
 
-/* Removed 'header' from hidden elements so sidebar toggle remains visible */
+/* Make the Streamlit header transparent to prevent cropping the custom titlebar */
+[data-testid="stHeader"] {{
+  background-color: transparent !important;
+}}
+
+/* Hide default menus and footer */
 #MainMenu, footer {{visibility: hidden;}}
 
 /* Executive Dual-Logo Banner */
