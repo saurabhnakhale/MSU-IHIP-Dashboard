@@ -4,9 +4,9 @@ Executive Power BI-Style Streamlit Dashboard.
 
 Features:
 - Dual Logo Header (NCDC.png Left, NMC.png Right with enlarged dimensions).
-- Cohesive Soft Ice/Slate Full-Dashboard Background Theme.
+- Clean, Modern Soft Slate Background Theme.
 - Live Google Sheets Sync with local CSV backup fallback.
-- Large Custom Signages on KPI Cards.
+- Modern Hover-Effect KPI Cards.
 - Standalone NMC vs Outside Cases Section with search box.
 """
 
@@ -32,15 +32,15 @@ DATA_PATH = Path(__file__).parent / "data" / "MSU_IDSP_Disease_Surveillance.csv"
 NCDC_LOGO_PATH = Path(__file__).parent / "NCDC.png"
 NMC_LOGO_PATH = Path(__file__).parent / "NMC.png"
 
-# Professional Color Palette
+# Professional Modern Color Palette (Tailwind Inspired)
 PALETTE = {
-    "primary": "#1E40AF",     # Executive Blue
-    "secondary": "#6D28D9",   # Deep Purple
-    "teal": "#0D9488",        # Vibrant Teal
-    "amber": "#D97706",       # Deep Amber
-    "rose": "#BE123C",        # Crimson Rose
-    "emerald": "#047857",     # Deep Emerald
-    "bg_main": "#F1F5F9",     # Soft Slate Background
+    "primary": "#3B82F6",     # Modern Bright Blue
+    "secondary": "#8B5CF6",   # Soft Purple
+    "teal": "#14B8A6",        # Vibrant Teal
+    "amber": "#F59E0B",       # Deep Amber
+    "rose": "#F43F5E",        # Crisp Rose/Red
+    "emerald": "#10B981",     # Clean Emerald Green
+    "bg_main": "#F8FAFC",     # Ultra-light Slate Background
 }
 
 REQUIRED_COLUMNS = [
@@ -66,14 +66,14 @@ ncdc_logo_b64 = get_image_base64(NCDC_LOGO_PATH)
 nmc_logo_b64 = get_image_base64(NMC_LOGO_PATH)
 
 # ----------------------------------------------------------------------------
-# Custom CSS (Full Dashboard Background + Dual Logo Banner)
+# Custom CSS (Modern Aesthetics, Hover Effects, Clean Banner)
 # ----------------------------------------------------------------------------
 st.markdown(f"""
 <style>
 /* Full Page Background */
 .stApp {{
-  background-color: #F1F5F9;
-  font-family: "Segoe UI", -apple-system, Arial, sans-serif;
+  background-color: {PALETTE['bg_main']};
+  font-family: "Inter", "Segoe UI", -apple-system, Arial, sans-serif;
 }}
 
 /* Expand dashboard to screen edges by removing max-width and overriding side paddings */
@@ -90,7 +90,13 @@ st.markdown(f"""
   background-color: transparent !important;
 }}
 
-/* Autohide the top-right toolbar (Fork, Menu, GitHub) to free up visual space */
+/* Clean white sidebar */
+[data-testid="stSidebar"] {{
+    background-color: #FFFFFF;
+    border-right: 1px solid #E2E8F0;
+}}
+
+/* Autohide the top-right toolbar */
 [data-testid="stToolbar"] {{
   opacity: 0;
   transition: opacity 0.3s ease-in-out;
@@ -103,17 +109,17 @@ st.markdown(f"""
 /* Hide default menus and footer */
 #MainMenu, footer {{visibility: hidden;}}
 
-/* Executive Dual-Logo Banner */
+/* Executive Modern Blue Banner (Matched to NMC style) */
 .titlebar {{
-  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  background-color: {PALETTE['primary']};
   color: #FFFFFF;
   padding: 16px 28px;
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  margin-bottom: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
 }}
 .titlebar .brand-container {{
   display: flex;
@@ -123,14 +129,14 @@ st.markdown(f"""
 }}
 .titlebar .brand-title {{
   font-size: 26px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.3px;
   color: #FFFFFF;
   line-height: 1.2;
 }}
 .titlebar .subtext {{
-  font-size: 11px;
-  color: #94A3B8;
+  font-size: 12px;
+  color: #DBEAFE; /* Light blue text for contrast against bright blue */
   font-weight: 500;
   margin-top: 4px;
 }}
@@ -140,28 +146,35 @@ st.markdown(f"""
   height: 85px;
   width: auto;
   object-fit: contain;
-  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.4));
+  background: #FFFFFF;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }}
 
-/* 3D Dynamic KPI Cards */
+/* 3D Dynamic KPI Cards with Hover Effects */
 .pbi-card {{
   background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-  padding: 14px 16px;
-  margin-bottom: 8px;
+  border: 1px solid #F1F5F9;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }}
-.kpi-label {{ font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; }}
-.kpi-value-container {{ display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }}
-.kpi-value {{ font-size: 26px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; }}
-.kpi-signage {{ font-size: 32px; line-height: 1; margin-left: 8px; }}
-.kpi-accent {{ height: 4px; border-radius: 2px; margin-bottom: 8px; }}
+.pbi-card:hover {{
+  transform: translateY(-3px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+}}
+.kpi-label {{ font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B; }}
+.kpi-value-container {{ display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }}
+.kpi-value {{ font-size: 28px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; }}
+.kpi-signage {{ font-size: 32px; line-height: 1; }}
 
-.badge-ok {{ background: #DCFCE7; color: #15803D; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; }}
-.badge-warn {{ background: #FEE2E2; color: #B91C1C; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; }}
+.badge-ok {{ background: #DCFCE7; color: #15803D; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-left: 8px; }}
+.badge-warn {{ background: #FEE2E2; color: #B91C1C; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-left: 8px;}}
 
-.section-title {{ font-size: 14px; font-weight: 800; color: #0F172A; margin: 8px 0 8px 2px; text-transform: uppercase; letter-spacing: 0.4px; }}
+.section-title {{ font-size: 15px; font-weight: 700; color: #1E293B; margin: 12px 0 12px 2px; text-transform: uppercase; letter-spacing: 0.5px; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -300,7 +313,7 @@ st.markdown(f"""
       <div class="brand-title">MSU · IDSP Disease Surveillance Report — Nagpur</div>
       <div class="subtext">
         Source: <b>{source_label}</b> &nbsp;·&nbsp; {meta['rows']:,} Records &nbsp;·&nbsp;
-        Refreshed {st.session_state.last_refreshed.strftime('%d %b %Y, %H:%M')} &nbsp;·&nbsp; {badge}
+        Refreshed {st.session_state.last_refreshed.strftime('%d %b %Y, %H:%M')} {badge}
       </div>
     </div>
   </div>
@@ -311,7 +324,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------------------------------
-# KPI Cards with Large Custom Signages
+# KPI Cards with Modern Styling
 # ----------------------------------------------------------------------------
 total_pform = filtered["P Form"].fillna(0).sum()
 total_lform = filtered["L Form"].fillna(0).sum()
@@ -321,19 +334,18 @@ avg_positivity = pos_rows.mean() if len(pos_rows) else 0
 active_diseases = filtered.loc[(filtered["P Form"].fillna(0) + filtered["L Form"].fillna(0)) > 0, "Disease"].nunique()
 
 kpis = [
-    ("Total P-Form Cases", f"{total_pform:,.0f}", PALETTE["primary"], "💊"),
-    ("Total L-Form Cases", f"{total_lform:,.0f}", PALETTE["secondary"], "🧪"),
-    ("Samples Tested", f"{total_tested:,.0f}", PALETTE["amber"], "🔬"),
-    ("Avg Lab Positivity", f"{avg_positivity:.1f}%", PALETTE["rose"], "🥼"),
-    ("Diseases Reporting", f"{active_diseases:,}", PALETTE["emerald"], "📊"),
+    ("Total P-Form Cases", f"{total_pform:,.0f}", "💊"),
+    ("Total L-Form Cases", f"{total_lform:,.0f}", "🧪"),
+    ("Samples Tested", f"{total_tested:,.0f}", "🔬"),
+    ("Avg Lab Positivity", f"{avg_positivity:.1f}%", "🥼"),
+    ("Diseases Reporting", f"{active_diseases:,}", "📊"),
 ]
 
 cols = st.columns(5)
-for col, (label, value, color, signage) in zip(cols, kpis):
+for col, (label, value, signage) in zip(cols, kpis):
     with col:
         st.markdown(f"""
         <div class="pbi-card">
-          <div class="kpi-accent" style="background:{color}"></div>
           <div class="kpi-label">{label}</div>
           <div class="kpi-value-container">
              <div class="kpi-value">{value}</div>
@@ -351,14 +363,14 @@ def apply_pbi_layout(fig, height=320, show_legend=False):
     fig.update_layout(
         height=height,
         margin=dict(l=15, r=15, t=15, b=15),
-        plot_bgcolor="#FFFFFF",
-        paper_bgcolor="#FFFFFF",
-        font=dict(family="Segoe UI, Arial", size=11, color="#334155"),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, Segoe UI, Arial", size=11, color="#334155"),
         showlegend=show_legend,
         legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5) if show_legend else None,
     )
     fig.update_xaxes(showgrid=False, zeroline=False)
-    fig.update_yaxes(showgrid=True, gridcolor="#E2E8F0", zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor="#F1F5F9", zeroline=False) # Softer gridlines
     return fig
 
 
@@ -380,7 +392,8 @@ with c_left_panel:
             fig = go.Figure(go.Scatter(
                 x=p_daily.index, y=p_daily.values, mode="lines+markers",
                 line=dict(color=PALETTE["primary"], width=3),
-                fill="tozeroy", fillcolor="rgba(30, 64, 175, 0.12)"
+                fill="tozeroy", fillcolor="rgba(59, 130, 246, 0.15)",
+                marker=dict(size=6, color=PALETTE["primary"])
             ))
             st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
@@ -388,7 +401,7 @@ with c_left_panel:
             p_wk = filtered.groupby("Week")["P Form"].sum().sort_index()
             fig = go.Figure(go.Bar(
                 x=[f"W{int(w)}" for w in p_wk.index if pd.notna(w)], y=p_wk.values,
-                marker=dict(color=PALETTE["primary"])
+                marker=dict(color=PALETTE["primary"], border_radius=4)
             ))
             st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
@@ -396,7 +409,7 @@ with c_left_panel:
             p_mo = filtered.groupby("Month")["P Form"].sum()
             fig = go.Figure(go.Bar(
                 x=p_mo.index, y=p_mo.values,
-                marker=dict(color=PALETTE["primary"])
+                marker=dict(color=PALETTE["primary"], border_radius=4)
             ))
             st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
@@ -408,7 +421,8 @@ with c_left_panel:
             fig = go.Figure(go.Scatter(
                 x=l_daily.index, y=l_daily.values, mode="lines+markers",
                 line=dict(color=PALETTE["secondary"], width=3),
-                fill="tozeroy", fillcolor="rgba(109, 40, 217, 0.12)"
+                fill="tozeroy", fillcolor="rgba(139, 92, 246, 0.15)",
+                marker=dict(size=6, color=PALETTE["secondary"])
             ))
             st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
@@ -416,7 +430,7 @@ with c_left_panel:
             l_wk = filtered.groupby("Week")["L Form"].sum().sort_index()
             fig = go.Figure(go.Bar(
                 x=[f"W{int(w)}" for w in l_wk.index if pd.notna(w)], y=l_wk.values,
-                marker=dict(color=PALETTE["secondary"])
+                marker=dict(color=PALETTE["secondary"], border_radius=4)
             ))
             st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
@@ -424,7 +438,7 @@ with c_left_panel:
             l_mo = filtered.groupby("Month")["L Form"].sum()
             fig = go.Figure(go.Bar(
                 x=l_mo.index, y=l_mo.values,
-                marker=dict(color=PALETTE["secondary"])
+                marker=dict(color=PALETTE["secondary"], border_radius=4)
             ))
             st.plotly_chart(apply_pbi_layout(fig), use_container_width=True, config={"displayModeBar": False})
 
@@ -550,7 +564,8 @@ st.dataframe(
         "Tested": st.column_config.NumberColumn(format="%.0f"),
         "Avg Positivity %": st.column_config.NumberColumn(format="%.1f%%"),
         "Share of Total %": st.column_config.ProgressColumn(
-            format="%.1f%%", min_value=0, max_value=float(grp["Share of Total %"].max() or 1)
+            format="%.1f%%", min_value=0, max_value=float(grp["Share of Total %"].max() or 1),
+            color=PALETTE["primary"]
         ),
     },
     height=380,
