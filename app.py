@@ -295,8 +295,7 @@ with st.sidebar:
     sel_status = st.multiselect("Visit Status", sorted(df["Visit Status"].dropna().unique().tolist()), default=[], key=f"status_{st.session_state.filter_key}")
 
     disease_totals = (df.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1).sort_values(ascending=False))
-    search = st.text_input("Global Disease Filter", key=f"search_{st.session_state.filter_key}")
-    disease_options = [d for d in disease_totals.index if search.lower() in d.lower()]
+    disease_options = disease_totals.index.tolist()
     sel_diseases = st.multiselect("Select Disease", disease_options, default=[], key=f"disease_{st.session_state.filter_key}")
 
 # Apply Filters (Updated logic to handle separate start/end dates)
