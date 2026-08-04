@@ -77,7 +77,7 @@ st.markdown(f"""
 }}
 
 .block-container {{ padding-top: 1rem; padding-bottom: 2rem; max-width: 1480px; }}
-#MainMenu, footer, header {{visibility: hidden;}}
+#MainMenu, footer {visibility: hidden;}
 
 /* Executive Dual-Logo Banner */
 .titlebar {{
