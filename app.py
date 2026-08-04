@@ -84,6 +84,15 @@ st.markdown(f"""
   background-color: transparent !important;
 }}
 
+/* Autohide the top-right toolbar (Fork, Menu, GitHub) to free up visual space */
+[data-testid="stToolbar"] {{
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}}
+[data-testid="stToolbar"]:hover {{
+  opacity: 1;
+}}
+
 /* Hide default menus and footer */
 #MainMenu, footer {{visibility: hidden;}}
 
