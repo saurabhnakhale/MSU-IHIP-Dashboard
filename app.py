@@ -229,6 +229,9 @@ if "cache_bust" not in st.session_state:
     st.session_state.cache_bust = 0
 if "last_refreshed" not in st.session_state:
     st.session_state.last_refreshed = datetime.now()
+# Session state key to reset filters
+if "filter_key" not in st.session_state:
+    st.session_state.filter_key = 0
 
 with st.sidebar:
     st.markdown("### 🔄 Data Source Controls")
@@ -273,6 +276,7 @@ with st.sidebar:
         st.markdown("<h3 style='margin-bottom: 0px;'>Filters 🔍</h3>", unsafe_allow_html=True)
     with c_reset:
         if st.button("Reset", use_container_width=True):
+            st.session_state.filter_key += 1 # Update key to flush UI state
             st.rerun()
 
     min_date = df["Date_dt"].min().date() if df["Date_dt"].notna().any() else datetime.today().date()
@@ -282,18 +286,18 @@ with st.sidebar:
     st.markdown("<div style='font-size: 14px; font-weight: 600; color: #334155; margin-bottom: -15px; margin-top: 10px;'>Date Window</div>", unsafe_allow_html=True)
     col_start, col_end = st.columns(2)
     with col_start:
-        start_date = st.date_input("From", value=min_date, min_value=min_date, max_value=max_date, format="DD/MM/YYYY")
+        start_date = st.date_input("From", value=min_date, min_value=min_date, max_value=max_date, format="DD/MM/YYYY", key=f"start_{st.session_state.filter_key}")
     with col_end:
-        end_date = st.date_input("To", value=max_date, min_value=min_date, max_value=max_date, format="DD/MM/YYYY")
+        end_date = st.date_input("To", value=max_date, min_value=min_date, max_value=max_date, format="DD/MM/YYYY", key=f"end_{st.session_state.filter_key}")
 
-    sel_months = st.multiselect("Month", sorted(df["Month"].dropna().unique().tolist()), default=[])
-    sel_weeks = st.multiselect("Epi Week", sorted(df["Week"].dropna().unique().tolist()), default=[])
-    sel_status = st.multiselect("Visit Status", sorted(df["Visit Status"].dropna().unique().tolist()), default=[])
+    sel_months = st.multiselect("Month", sorted(df["Month"].dropna().unique().tolist()), default=[], key=f"month_{st.session_state.filter_key}")
+    sel_weeks = st.multiselect("Epi Week", sorted(df["Week"].dropna().unique().tolist()), default=[], key=f"week_{st.session_state.filter_key}")
+    sel_status = st.multiselect("Visit Status", sorted(df["Visit Status"].dropna().unique().tolist()), default=[], key=f"status_{st.session_state.filter_key}")
 
     disease_totals = (df.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1).sort_values(ascending=False))
-    search = st.text_input("Global Disease Filter")
+    search = st.text_input("Global Disease Filter", key=f"search_{st.session_state.filter_key}")
     disease_options = [d for d in disease_totals.index if search.lower() in d.lower()]
-    sel_diseases = st.multiselect("Select Disease", disease_options, default=[])
+    sel_diseases = st.multiselect("Select Disease", disease_options, default=[], key=f"disease_{st.session_state.filter_key}")
 
 # Apply Filters (Updated logic to handle separate start/end dates)
 filtered = df.copy()
@@ -492,7 +496,7 @@ st.markdown('<div class="section-title">📍 NMC vs Outside Regional Cases (L-Fo
 
 col_search, _ = st.columns([1, 1])
 with col_search:
-    nmc_search = st.text_input("🔍 Search Disease for NMC/Outside Chart", key="standalone_nmc_search")
+    nmc_search = st.text_input("🔍 Search Disease for NMC/Outside Chart", key=f"standalone_nmc_search_{st.session_state.filter_key}")
 
 nmc_df = filtered.groupby("Disease")[["NMC", "Outside"]].sum()
 if nmc_search:
