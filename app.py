@@ -7,6 +7,7 @@ Features:
 - Cohesive Soft Ice/Slate Full-Dashboard Background Theme.
 - Live Google Sheets Sync with local CSV backup fallback.
 - Large Custom Signages on KPI Cards.
+- Sequential/Cascading Filters (Dropdowns update based on previous selections).
 - Standalone NMC vs Outside Cases Section with search box.
 """
 
@@ -266,7 +267,7 @@ if not meta["ok"]:
     st.stop()
 
 # ----------------------------------------------------------------------------
-# Sidebar Slicers
+# Sidebar Cascading Slicers (Dynamically Linked)
 # ----------------------------------------------------------------------------
 with st.sidebar:
     
@@ -281,6 +282,7 @@ with st.sidebar:
     min_date = df["Date_dt"].min().date() if df["Date_dt"].notna().any() else datetime.today().date()
     max_date = df["Date_dt"].max().date() if df["Date_dt"].notna().any() else datetime.today().date()
     
+    # --- Step 1: Date Window Filter ---
     st.markdown("<div style='font-size: 14px; font-weight: 600; color: #334155; margin-bottom: -15px; margin-top: 10px;'>Date Window</div>", unsafe_allow_html=True)
     col_start, col_end = st.columns(2)
     with col_start:
@@ -288,27 +290,41 @@ with st.sidebar:
     with col_end:
         end_date = st.date_input("To", value=max_date, min_value=min_date, max_value=max_date, format="DD/MM/YYYY", key=f"end_{st.session_state.filter_key}")
 
-    sel_months = st.multiselect("Month", sorted(df["Month"].dropna().unique().tolist()), default=[], key=f"month_{st.session_state.filter_key}")
-    sel_weeks = st.multiselect("Epi Week", sorted(df["Week"].dropna().unique().tolist()), default=[], key=f"week_{st.session_state.filter_key}")
-    sel_status = st.multiselect("Visit Status", sorted(df["Visit Status"].dropna().unique().tolist()), default=[], key=f"status_{st.session_state.filter_key}")
+    # Copy df to apply cascading sequential filters
+    temp_df = df.copy()
+    temp_df = temp_df[(temp_df["Date_dt"].dt.date >= start_date) & (temp_df["Date_dt"].dt.date <= end_date)]
 
-    disease_totals = (df.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1).sort_values(ascending=False))
+    # --- Step 2: Month Filter (Depends on Date) ---
+    available_months = sorted(temp_df["Month"].dropna().unique().tolist())
+    sel_months = st.multiselect("Month", available_months, default=[], key=f"month_{st.session_state.filter_key}")
+    
+    if sel_months:
+        temp_df = temp_df[temp_df["Month"].isin(sel_months)]
+
+    # --- Step 3: Week Filter (Depends on Month) ---
+    available_weeks = sorted(temp_df["Week"].dropna().unique().tolist())
+    sel_weeks = st.multiselect("Epi Week", available_weeks, default=[], key=f"week_{st.session_state.filter_key}")
+    
+    if sel_weeks:
+        temp_df = temp_df[temp_df["Week"].isin(sel_weeks)]
+
+    # --- Step 4: Visit Status (Depends on Week) ---
+    available_status = sorted(temp_df["Visit Status"].dropna().unique().tolist())
+    sel_status = st.multiselect("Visit Status", available_status, default=[], key=f"status_{st.session_state.filter_key}")
+    
+    if sel_status:
+        temp_df = temp_df[temp_df["Visit Status"].isin(sel_status)]
+
+    # --- Step 5: Disease Filter (Depends on Status) ---
+    disease_totals = (temp_df.groupby("Disease")[["P Form", "L Form"]].sum().sum(axis=1).sort_values(ascending=False))
     disease_options = disease_totals.index.tolist()
     sel_diseases = st.multiselect("Select Disease", disease_options, default=[], key=f"disease_{st.session_state.filter_key}")
 
-# Apply Filters
-filtered = df.copy()
+    if sel_diseases:
+        temp_df = temp_df[temp_df["Disease"].isin(sel_diseases)]
 
-filtered = filtered[(filtered["Date_dt"].dt.date >= start_date) & (filtered["Date_dt"].dt.date <= end_date)]
-
-if sel_months:
-    filtered = filtered[filtered["Month"].isin(sel_months)]
-if sel_weeks:
-    filtered = filtered[filtered["Week"].isin(sel_weeks)]
-if sel_status:
-    filtered = filtered[filtered["Visit Status"].isin(sel_status)]
-if sel_diseases:
-    filtered = filtered[filtered["Disease"].isin(sel_diseases)]
+# Final Filtered DataFrame applied globally
+filtered = temp_df.copy()
 
 # ----------------------------------------------------------------------------
 # Dual Logo Header Title Bar
