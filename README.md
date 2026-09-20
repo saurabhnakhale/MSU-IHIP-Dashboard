@@ -1,79 +1,52 @@
-# MSU · IDSP Disease Surveillance Report
+🚨 **From Disease Data to Real-Time Surveillance Insights**
 
-A Power BI-styled, live Streamlit dashboard for the MSU IDSP P-Form/L-Form
-disease surveillance data (Nagpur).
+Excited to share a project I’ve been working on: **MSU · IDSP Disease Surveillance Dashboard** — a Power BI-styled 
+**live Streamlit dashboard** built for monitoring **P-Form & L-Form disease surveillance data in Nagpur**.
 
-## What "live" means here
+1.Github Project:https://github.com/saurabhnakhale/MSU-IHIP-Dashboard
+2.Live Dashboard: https://msu-ihip-dashboard.streamlit.app/
 
-- The app reads `data/MSU_IDSP_Disease_Surveillance.csv` from disk every time
-  you hit **Refresh data** in the sidebar (it clears Streamlit's cache and
-  re-reads the file) — so it stays in sync with whatever is on disk / in the
-  repo, without needing a redeploy.
-- You can also drop in any other CSV with the same columns via the sidebar
-  uploader, for a one-off look without touching the repo file.
-- On every load, the app reconciles `P Form + L Form` against the CSV's own
-  `Total` column and shows a **✓ Reconciled** / **⚠ Check totals** badge in
-  the header, so bad data never publishes silently.
+The goal was simple:
 
-## Project structure
+📊 **Turn surveillance data into actionable information — without waiting for manual reporting and repeated data preparation.**
 
-```
-.
-├── app.py                  # the Streamlit app
-├── requirements.txt
-├── data/
-│   └── MSU_IDSP_Disease_Surveillance.csv
-└── .streamlit/
-    └── config.toml         # Power BI-style theme colors
-```
+### 🔍 What makes this dashboard different?
 
-## Run it locally
+🔄 **Live Data Refresh**
+The dashboard reads the latest CSV data directly from the data source whenever the user refreshes the application.
 
-```bash
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-streamlit run app.py
-```
+📁 **Flexible Data Upload**
+Users can upload another surveillance CSV for quick analysis without changing the underlying application.
 
-To refresh with new data locally: replace/edit
-`data/MSU_IDSP_Disease_Surveillance.csv` directly, then click **Refresh data**
-in the running app — no restart needed.
+✅ **Built-in Data Reconciliation**
+The application automatically checks whether:
 
-## Deploy for free on Streamlit Community Cloud
+**P-Form + L-Form = Reported Total**
 
-1. Create a new GitHub repo and push this folder:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit: IDSP surveillance dashboard"
-   git branch -M main
-   git remote add origin https://github.com/<your-username>/<repo-name>.git
-   git push -u origin main
-   ```
-2. Go to [share.streamlit.io](https://share.streamlit.io), sign in with
-   GitHub, and click **New app**.
-3. Pick your repo, branch `main`, and main file path `app.py`. Click
-   **Deploy**.
-4. You'll get a URL like `https://<app-name>.streamlit.app` — that's your
-   live dashboard.
+and displays a clear **✓ Reconciled** or **⚠ Check Totals** status.
 
-### Updating the data on the deployed app
+📈 **Interactive Surveillance Analytics**
+The dashboard is designed to transform disease surveillance records into trends, KPIs and monitoring views that can support public-health review.
 
-Streamlit Cloud serves whatever is in your GitHub repo, so to publish new
-data:
+☁️ **Deployable & Accessible**
+The application can be deployed through **Streamlit Community Cloud**, making the dashboard accessible through a web browser.
 
-```bash
-# replace data/MSU_IDSP_Disease_Surveillance.csv with the new export, then:
-git add data/MSU_IDSP_Disease_Surveillance.csv
-git commit -m "Update surveillance data"
-git push
-```
+### 💡 The bigger idea
 
-The app redeploys automatically within a minute or two. Once it's live,
-clicking **Refresh data** in the sidebar re-reads that file — useful if the
-app was already open in a browser tab when you pushed the update.
+A dashboard should not just *display numbers*.
 
-If you'd rather not commit data to GitHub each time, use the sidebar's CSV
-uploader instead — it works the same way on the deployed app and never
-touches the repo.
+It should help answer:
+
+**What is happening?
+Where is it happening?
+Is the data reliable?
+And where should attention be focused?**
+
+This project combines **Data Analytics + Public Health Surveillance + Data Validation + Streamlit** to create a practical reporting solution.
+
+🛠️ **Technology Stack:**
+Python | Streamlit | Pandas | CSV | Data Validation | GitHub | Streamlit Cloud
+
+For me, this is another step toward building **data-driven public health systems where data quality and visualization work together.**
+
+#DataAnalytics #PublicHealth #DiseaseSurveillance #IDSP #Streamlit #Python #Pandas #PowerBI #DataVisualization #HealthAnalytics #DigitalHealth #HealthcareAnalytics #Nagpur
